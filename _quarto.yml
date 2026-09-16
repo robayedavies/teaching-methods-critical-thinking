@@ -44,5 +44,5 @@ format:
     theme:
       - cosmo
       - brand
-  pdf:
-    documentclass: scrreprt
+    css: styles.css
+    number-sections: true 

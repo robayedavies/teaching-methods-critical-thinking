@@ -77,6 +77,7 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 
 
+<link rel="stylesheet" href="styles.css">
 </head>
 
 <body class="nav-sidebar floating quarto-light">
@@ -220,8 +221,16 @@ ul.task-list li input[type="checkbox"] {
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#the-typical-workflow-locating-where-you-work" id="toc-the-typical-workflow-locating-where-you-work" class="nav-link active" data-scroll-target="#the-typical-workflow-locating-where-you-work"><span class="header-section-number">12.1</span> The typical workflow: locating where you work</a></li>
+  <li><a href="#the-typical-workflow-thinking-about-the-sequence-of-actions" id="toc-the-typical-workflow-thinking-about-the-sequence-of-actions" class="nav-link" data-scroll-target="#the-typical-workflow-thinking-about-the-sequence-of-actions"><span class="header-section-number">12.2</span> The typical workflow: thinking about the sequence of actions</a></li>
+  <li><a href="#creating-or-editing-content" id="toc-creating-or-editing-content" class="nav-link" data-scroll-target="#creating-or-editing-content"><span class="header-section-number">12.3</span> Creating or editing content</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -245,8 +254,96 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="the-typical-workflow-locating-where-you-work" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="the-typical-workflow-locating-where-you-work"><span class="header-section-number">12.1</span> The typical workflow: locating where you work</h2>
+<p>Mostly, we would expect to work to write or to make edits to content for a book like this book in the following workflow.</p>
+<ul>
+<li>We could but we typically will not make edits to files in the repository through GitHub. Notice that the repository view shows us the files in the repository folder.</li>
+</ul>
+<div id="fig-github-repository-information-file-view" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-github-repository-information-file-view-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./files/github-repository-information-file-view.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-repository-information-file-view-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;12.1: github-repository-information-file-view
+</figcaption>
+</figure>
+</div>
+<p>If you click on the files e.g.&nbsp;the <code>references.bib</code> file then you can see the file contents and a pencil at the top of the file view window. If you clicked on the pencil, you could edit the file contents directly through the GitHub web interface.</p>
+<div id="fig-github-repository-information-file-edit-view" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-github-repository-information-file-edit-view-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./files/github-repository-information-file-edit-view.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-repository-information-file-edit-view-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;12.2: github-repository-information-file-edit-view
+</figcaption>
+</figure>
+</div>
+<ul>
+<li>We are not going to do that.</li>
+</ul>
+<p>Most of the time, I would expect us to work locally (on our computer):</p>
+<ul>
+<li>with the contents of the local hard drive folder version of our project folder;</li>
+<li>writing, or making edits, to those contents or to new content elements in the R-Studio IDE (or the new Positron IDE);</li>
+<li>and ultimately pushing those local changes from our computer up to the remote repository.</li>
+</ul>
+<p>In any working session, then, we would begin by opening the project folder by clicking on it in our file folder window (Finder in Macs). Here, that means clicking on the <code>teaching-critical-thinking.Rproj</code> file name.</p>
+<div id="fig-finder-project-folder-rproj" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-finder-project-folder-rproj-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./files/finder-project-folder-rproj.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-finder-project-folder-rproj-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;12.3: finder-project-folder-rproj
+</figcaption>
+</figure>
+</div>
+<p>In whatever project you are working on, the workflow to this point will ensure you have an <code>.Rproj</code> folder file to work with at the top level of the folder.</p>
+<ul>
+<li>Things are changing but generally a project oriented workflow is the recommended practice:</li>
+</ul>
+<p><a href="https://tidyverse.org/blog/2017/12/workflow-vs-script/" class="uri">https://tidyverse.org/blog/2017/12/workflow-vs-script/</a></p>
+<ul>
+<li>See this information on the New Folder from Template workflow in Positron (this is a place-holder for thinking about this workflow):</li>
+</ul>
+<p><a href="https://positron.posit.co/folder-templates.html" class="uri">https://positron.posit.co/folder-templates.html</a></p>
+</section>
+<section id="the-typical-workflow-thinking-about-the-sequence-of-actions" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="the-typical-workflow-thinking-about-the-sequence-of-actions"><span class="header-section-number">12.2</span> The typical workflow: thinking about the sequence of actions</h2>
+<p>Typically, you may proceed as follows: we assume that we are working in RStudio, in the context of the <code>.Rproj</code> folder for the project.</p>
+<ul>
+<li>I may sensibly begin in the Git window in RStudio (RStudio/Git) by clicking on Pull to check if any changes have been made to the project following my last action, and to pull down those changes from the remote repository to my local version of the repository.</li>
+<li>I create a file or edit a file.</li>
+<li>I save the changes.</li>
+<li>I commit and push the changes from my local to the remote repository.</li>
+<li>Maybe I’ll preview the results of the changes.</li>
+<li>I cycle through these changes until I am ready to render.</li>
+<li>I render.</li>
+<li>I push the changed or new files resulting from the render process.</li>
+</ul>
+</section>
+<section id="creating-or-editing-content" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="creating-or-editing-content"><span class="header-section-number">12.3</span> Creating or editing content</h2>
+<p>We can think about creating or editing content in terms of multiple aspects. We can distinguish these aspects though we may not always be working on all of them:</p>
+<ul>
+<li>Structure – working with parts, chapters, sections, blocks, divs and spans;</li>
+<li>Content – text, images, computation inline or in code chunks;</li>
+<li>Cross-references – to other book parts, to chapters, and to sections, figures, tables, files and other resources, and links to external webpages.</li>
+</ul>
+<p>Information on book structure is here:</p>
+<p><a href="https://quarto.org/docs/books/book-structure.html" class="uri">https://quarto.org/docs/books/book-structure.html</a></p>
+<p>Information on working with markdown in Quarto to create or edit content is here:</p>
+<p><a href="https://quarto.org/docs/authoring/markdown-basics.html#sec-divs-and-spans" class="uri">https://quarto.org/docs/authoring/markdown-basics.html#sec-divs-and-spans</a></p>
+<p>Information on working with R is here:</p>
+<p><a href="https://quarto.org/docs/computations/r.html" class="uri">https://quarto.org/docs/computations/r.html</a></p>
+<p>Information on cross-references is here:</p>
+<p><a href="https://quarto.org/docs/computations/r.html" class="uri">https://quarto.org/docs/computations/r.html</a></p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

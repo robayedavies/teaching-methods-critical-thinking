@@ -26,6 +26,42 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+q { quotes: "“" "”" "‘" "’"; }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -77,6 +113,7 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 
 
+<link rel="stylesheet" href="styles.css">
 </head>
 
 <body class="nav-sidebar floating quarto-light">
@@ -220,8 +257,21 @@ ul.task-list li input[type="checkbox"] {
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#organizing-a-book-into-parts-and-chapters" id="toc-organizing-a-book-into-parts-and-chapters" class="nav-link active" data-scroll-target="#organizing-a-book-into-parts-and-chapters"><span class="header-section-number">13.1</span> Organizing a book into parts and chapters</a></li>
+  <li><a href="#writing-content-adding-text-adding-sections-adding-callout-boxes-and-inserting-images" id="toc-writing-content-adding-text-adding-sections-adding-callout-boxes-and-inserting-images" class="nav-link" data-scroll-target="#writing-content-adding-text-adding-sections-adding-callout-boxes-and-inserting-images"><span class="header-section-number">13.2</span> Writing content: adding text, adding sections, adding callout boxes, and inserting images</a>
+  <ul class="collapse">
+  <li><a href="#adding-text" id="toc-adding-text" class="nav-link" data-scroll-target="#adding-text"><span class="header-section-number">13.2.1</span> Adding text</a></li>
+  <li><a href="#adding-sections" id="toc-adding-sections" class="nav-link" data-scroll-target="#adding-sections"><span class="header-section-number">13.2.2</span> Adding sections</a></li>
+  <li><a href="#adding-callout-boxes" id="toc-adding-callout-boxes" class="nav-link" data-scroll-target="#adding-callout-boxes"><span class="header-section-number">13.2.3</span> Adding callout boxes</a></li>
+  <li><a href="#sec-inserting-images" id="toc-sec-inserting-images" class="nav-link" data-scroll-target="#sec-inserting-images"><span class="header-section-number">13.2.4</span> Inserting images</a></li>
+  </ul></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -245,8 +295,420 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="organizing-a-book-into-parts-and-chapters" class="level2" data-number="13.1">
+<h2 data-number="13.1" class="anchored" data-anchor-id="organizing-a-book-into-parts-and-chapters"><span class="header-section-number">13.1</span> Organizing a book into parts and chapters</h2>
+<p>I have a rough idea in mind for a draft structure of parts and chapters. The book will be split into two parts:</p>
+<ul>
+<li>Content for teaching and learning, focused on critical thinking;</li>
+<li>Self-documenting writing and producing the book in Quarto.</li>
+</ul>
+<p>I’ll edit the yaml to add in the parts I’m thinking about right now.</p>
+<ul>
+<li>I’ll also create a bunch of empty .qmd files with the titles of the chapters I’m thinking about. This is so that the index process associated with the yaml can work without error:</li>
+<li>You create a new .qmd by going to: RStudio/File/New File/<code>Quarto Document ...</code> – and clicking on the <code>Create Empty Document</code> at the bottom of the dialogue box.</li>
+<li>When you do this, each new empty file will be created with a minimal yaml section e.g.:</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="sc">---</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>title<span class="sc">:</span> <span class="st">"[quarto file name.qmd]"</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>editor<span class="sc">:</span> visual</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="sc">---</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li><p>To reduce redundancy, I’m going to delete the <code>editor: visual</code> bit from each file. I will add it to <code>_quarto.yml</code> so that this property is then inherited by every book chapter .qmd.</p></li>
+<li><p>I also need to rename the dummy files created when I first created the book. I can do this directly in the file folder.</p></li>
+</ul>
+<p><code>intro.qmd</code> -&gt; <code>introduction.qmd</code> <code>summary.qmd</code> -&gt; <code>conclusions.qmd</code></p>
+<p>The <code>_quarto.yml</code> now looks like this:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>project<span class="sc">:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  type<span class="sc">:</span> book</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">-</span>dir<span class="sc">:</span> docs</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>book<span class="sc">:</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  title<span class="sc">:</span> <span class="st">"Teaching critical thinking"</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  author<span class="sc">:</span> <span class="st">"Rob Davies"</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  date<span class="sc">:</span> <span class="st">"9/15/2026"</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  chapters<span class="sc">:</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> index.qmd</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> part<span class="sc">:</span> <span class="st">"Critical thinking"</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> introduction.qmd</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> how<span class="sc">-</span>science<span class="sc">-</span>works.qmd</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> what<span class="sc">-</span>is<span class="sc">-</span>theory.qmd</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> evaluating<span class="sc">-</span>evidence.qmd</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> lying<span class="sc">-</span>cheating.qmd</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> criticality<span class="sc">-</span><span class="cf">in</span><span class="sc">-</span>writing.qmd</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> criticality<span class="sc">-</span><span class="cf">in</span><span class="sc">-</span>visualization.qmd</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> critical<span class="sc">-</span>citation<span class="sc">-</span>practice.qmd</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> subjectivity<span class="sc">-</span>objectivity<span class="sc">-</span>virtues.qmd</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> conclusions.qmd    </span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> part<span class="sc">:</span> <span class="st">"Quarto"</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> set<span class="sc">-</span>up<span class="sc">-</span>book.qmd</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> workflow<span class="sc">-</span>overview.qmd    </span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> markdown<span class="sc">-</span>basics.qmd</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> part<span class="sc">:</span> <span class="st">"References"</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="sc">-</span> references.qmd</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>bibliography<span class="sc">:</span> references.bib</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>editor<span class="sc">:</span> visual</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>format<span class="sc">:</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>  html<span class="sc">:</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    theme<span class="sc">:</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> cosmo</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> brand</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>  pdf<span class="sc">:</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    documentclass<span class="sc">:</span> scrreprt</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li><p>And the RStudio window shows the new files in both the <code>Files</code> sub window or tab, and in the <code>Git</code> tab.</p></li>
+<li><p>I commit the changes with the message: Set up book structure, edits to <code>_quarto.yml</code> and create empty .qmd files to hold content for new chapters.</p></li>
+<li><p>I check the preview in terminal with <code>quarto preview</code>. Looks good.</p></li>
+<li><p>I render the book with <code>quarto render</code>.</p></li>
+</ul>
+<p>The process of rendering changes the contents of the folder. We see the creation of new .html files, corresponding to the new chapters. We see deletion of the html files corresponding to the .qmd files I renamed.</p>
+<div id="fig-rstudio-edits-changes-git-files" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-rstudio-edits-changes-git-files-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./files/rstudio-edits-changes-git-files.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-edits-changes-git-files-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.1: rstudio-edits-changes-git-files
+</figcaption>
+</figure>
+</div>
+<ul>
+<li><p>I first stage the changes: in RStudio/Git under the <code>Staged</code> column, click on the check box at the top of the lift, press and hold SHIFT, then click on the check box at the bottom of the list, to stage all file entries.</p></li>
+<li><p>I commit the changes.</p></li>
+<li><p>I push the changes. From the moment I push the changes, if I go to the web view of my repository, I should be able to see that the deployment to GitHub Pages has been refreshed, and the resulting downstream web page should represent the revised book structure.</p></li>
+<li><p>It does.</p></li>
+</ul>
+<div id="fig-github-repo-pages-deployment-update" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-github-repo-pages-deployment-update-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./files/github-repo-pages-deployment-update.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-repo-pages-deployment-update-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.2: github-repo-pages-deployment-update
+</figcaption>
+</figure>
+</div>
+<ul>
+<li>The output looks ok in Safari:</li>
+</ul>
+<div id="fig-safari-webpage-book-structure-revised" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-safari-webpage-book-structure-revised-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./files/safari-webpage-book-structure-revised.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-safari-webpage-book-structure-revised-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.3: safari-webpage-book-structure-revised
+</figcaption>
+</figure>
+</div>
+</section>
+<section id="writing-content-adding-text-adding-sections-adding-callout-boxes-and-inserting-images" class="level2" data-number="13.2">
+<h2 data-number="13.2" class="anchored" data-anchor-id="writing-content-adding-text-adding-sections-adding-callout-boxes-and-inserting-images"><span class="header-section-number">13.2</span> Writing content: adding text, adding sections, adding callout boxes, and inserting images</h2>
+<section id="adding-text" class="level3" data-number="13.2.1">
+<h3 data-number="13.2.1" class="anchored" data-anchor-id="adding-text"><span class="header-section-number">13.2.1</span> Adding text</h3>
+<p>The basics of adding text is covered here:</p>
+<p><a href="https://quarto.org/docs/authoring/markdown-basics.html#links-images" class="uri">https://quarto.org/docs/authoring/markdown-basics.html#links-images</a></p>
+<p>And most of the time, we are writing stuff like this:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="do">### Adding text</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>The basics of adding text is covered here<span class="sc">:</span> </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="er">&lt;</span>https<span class="sc">:</span><span class="er">//</span>quarto.org<span class="sc">/</span>docs<span class="sc">/</span>authoring<span class="sc">/</span>markdown<span class="sc">-</span>basics.html<span class="co">#links-images&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="adding-sections" class="level3" data-number="13.2.2">
+<h3 data-number="13.2.2" class="anchored" data-anchor-id="adding-sections"><span class="header-section-number">13.2.2</span> Adding sections</h3>
+<p>Most of the time, we are going to divide our text into sections or into callout boxes.</p>
+<p>In Quarto, we use <code>#</code> marks to identify section headers, varying the number of <code>#</code> to indicate the level of section header.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Heading 1</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="do">## Heading 2</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="do">### Heading 3</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="do">#### Heading 4</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="do">##### Heading 5</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="do">###### Heading 6</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Quarto will automatically number the sections, and number the sections, unless we specify otherwise.</p>
+<p>We can tell Quarto to do this explicitly in the book yaml or in a chapter yaml. We can edit the book yaml <code>_quarto.yml</code> to be explicit about the behaviour we want.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>format<span class="sc">:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  html<span class="sc">:</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    theme<span class="sc">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> cosmo</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      <span class="sc">-</span> brand</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    number<span class="sc">-</span>sections<span class="sc">:</span> true  </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  pdf<span class="sc">:</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    documentclass<span class="sc">:</span> scrreprt</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    number<span class="sc">-</span>sections<span class="sc">:</span> true</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="cross-referencing-sections" class="level4" data-number="13.2.2.1">
+<h4 data-number="13.2.2.1" class="anchored" data-anchor-id="cross-referencing-sections"><span class="header-section-number">13.2.2.1</span> Cross-referencing sections</h4>
+<p>Cross references are an important facet of writing Quarto documents. We can add code to enable automatic referencing of equations, figures, images, sections and tables.</p>
+<p><a href="https://quarto.org/docs/authoring/cross-references.html#sections" class="uri">https://quarto.org/docs/authoring/cross-references.html#sections</a></p>
+<p>Let’s say we have a section <code>### Inserting images</code>, we can refer to the section as follows:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="do">### Inserting images {#sec-inserting-images}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This means that we can then write the code:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="sc">@</span>sec<span class="sc">-</span>inserting<span class="sc">-</span>images</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li>to get this: <a href="#sec-inserting-images" class="quarto-xref"><span>Section 13.2.4</span></a>.</li>
+</ul>
+</section>
+</section>
+<section id="adding-callout-boxes" class="level3" data-number="13.2.3">
+<h3 data-number="13.2.3" class="anchored" data-anchor-id="adding-callout-boxes"><span class="header-section-number">13.2.3</span> Adding callout boxes</h3>
+<p>It is often helpful to use callout boxes. We probably ought to be systematic or consistent about this across chapters (and across the contributions of different authors).</p>
+<p>You can find information about callout boxes here:</p>
+<p><a href="https://quarto.org/docs/authoring/cross-references.html#callouts" class="uri">https://quarto.org/docs/authoring/cross-references.html#callouts</a></p>
+<p>We often want to use one of the following variety of callout boxes – notice that we can label boxes for cross-referencing:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span> {<span class="co">#tip-example .callout-tip}</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="do">## Cross-Referencing a Tip</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>Add an ID starting with <span class="st">`</span><span class="at">#tip-</span><span class="st">`</span> to reference a tip.</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>See <span class="sc">@</span>tip<span class="sc">-</span>example...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="tip-example" class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip&nbsp;13.1: Cross-Referencing a Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Add an ID starting with <code>#tip-</code> to reference a tip.</p>
+</div>
+</div>
+<p>See <a href="#tip-example" class="quarto-xref">Tip&nbsp;<span>13.1</span></a>…</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span> {<span class="co">#nte-example .callout-note}</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="do">## Cross-Referencing a note</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>Add an ID starting with <span class="st">`</span><span class="at">#nte-</span><span class="st">`</span> to reference a note.</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>See <span class="sc">@</span>nte<span class="sc">-</span>example...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="nte-example" class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note&nbsp;13.1: Cross-Referencing a note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Add an ID starting with <code>#nte-</code> to reference a note.</p>
+</div>
+</div>
+<p>See <a href="#nte-example" class="quarto-xref">Note&nbsp;<span>13.1</span></a>…</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span> {<span class="co">#wrn-example .callout-warning}</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="do">## Cross-Referencing a warning</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>Add an ID starting with <span class="st">`</span><span class="at">#wrn-</span><span class="st">`</span> to reference a tip.</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>See <span class="sc">@</span>wrn<span class="sc">-</span>example...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="wrn-example" class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning&nbsp;13.1: Cross-Referencing a warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Add an ID starting with <code>#wrn-</code> to reference a tip.</p>
+</div>
+</div>
+<p>See <a href="#wrn-example" class="quarto-xref">Warning&nbsp;<span>13.1</span></a>…</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span> {<span class="co">#imp-example .callout-important}</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="do">## Cross-Referencing a important</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>Add an ID starting with <span class="st">`</span><span class="at">#imp-</span><span class="st">`</span> to reference something important.</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>See <span class="sc">@</span>imp<span class="sc">-</span>example...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="imp-example" class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Important&nbsp;13.1: Cross-Referencing a important
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Add an ID starting with <code>#imp-</code> to reference something important.</p>
+</div>
+</div>
+<p>See <a href="#imp-example" class="quarto-xref">Important&nbsp;<span>13.1</span></a>…</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span> {<span class="co">#cau-example .callout-caution}</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="do">## Cross-Referencing a caution</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>Add an ID starting with <span class="st">`</span><span class="at">#cau-</span><span class="st">`</span> to reference a caution.</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>See <span class="sc">@</span>cau<span class="sc">-</span>example...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="cau-example" class="callout callout-style-default callout-caution callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Caution&nbsp;13.1: Cross-Referencing a caution
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Add an ID starting with <code>#cau-</code> to reference a caution.</p>
+</div>
+</div>
+<p>See <a href="#cau-example" class="quarto-xref">Caution&nbsp;<span>13.1</span></a>…</p>
+<p>Most usefully, we can create boxes that are collapsible and that we can cross-reference:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span> {<span class="co">#nte-optional-command .callout-note collapse="true"}</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="do">## Optional heading</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>Your content here — this could include a code chunk, plain text, or both.</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="sc">:::</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>See <span class="sc">@</span>nte<span class="sc">-</span>optional<span class="sc">-</span>command <span class="cf">for</span> the optional command.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="nte-optional-command" class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note&nbsp;13.2: Optional heading
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Your content here — this could include a code chunk, plain text, or both.</p>
+</div>
+</div>
+</div>
+<p>See <a href="#nte-optional-command" class="quarto-xref">Note&nbsp;<span>13.2</span></a> for the optional command.</p>
+</section>
+<section id="sec-inserting-images" class="level3" data-number="13.2.4">
+<h3 data-number="13.2.4" class="anchored" data-anchor-id="sec-inserting-images"><span class="header-section-number">13.2.4</span> Inserting images</h3>
+<p>I am going to do this by example through editing the Quarto how-to files, to make this book building process self-documenting.</p>
+<p>If you insert an image in a .qmd, you use syntax like this:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="sc">!</span>[Caption](elephant.png)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li>where <code>[Caption]</code> the text in square brackets is the caption text, and <code>(elephant.png)</code> the file name in round brackets identifies the image file.</li>
+</ul>
+<p><a href="https://quarto.org/docs/authoring/markdown-basics.html#links-images" class="uri">https://quarto.org/docs/authoring/markdown-basics.html#links-images</a></p>
+<section id="working-with-a-set-of-multiple-images-so-that-you-need-to-organize-them-in-a-folder-and-locate-them-in-the-quarto-image-insertion-syntax" class="level4" data-number="13.2.4.1">
+<h4 data-number="13.2.4.1" class="anchored" data-anchor-id="working-with-a-set-of-multiple-images-so-that-you-need-to-organize-them-in-a-folder-and-locate-them-in-the-quarto-image-insertion-syntax"><span class="header-section-number">13.2.4.1</span> Working with a set of multiple images so that you need to organize them in a folder and locate them in the Quarto image insertion syntax</h4>
+<p>I might have to work with multiple image files, so I will collect them in a single folder.</p>
+<p>I am going to insert images showing screen shots of the workflow elements. I think it’ll be easier to do this, and tidier, if I locate all the image .png files in a single /files/ folder in the Quarto book working directory.</p>
+<p>If I do this, then identifying the file requires me to use syntax to identify both the image and its location (file path):</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="sc">!</span>[Caption](<span class="sc">/</span>files<span class="sc">/</span>elephant.png)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li><code>/files/</code> – tells Quarto that the .png is located in the <code>files</code> subfolder.</li>
+<li>the <code>/.../</code> use of forward slashes before and after the folder name tells Quarto that the folder is (with the first <code>/...</code> ) located at the top level of the book project folder (the project root).</li>
+</ul>
+<p>Typically, we are going to use syntax like this with a folder structure like this:</p>
+<pre><code>my-book/
+├── _quarto.yml
+├── index.qmd
+├── chapter1.qmd
+├── chapter2/
+│   └── chapter2.qmd
+└── files/
+    └── elephant.png</code></pre>
+<ul>
+<li>I create the new folder: <code>files</code> in the book project folder.</li>
+<li>I copy the screen shot .png files into the <code>/files/</code> folder.</li>
+<li>I commit the change: <q>Create a new files folder, and copy in screen shot images.</q></li>
+<li>I push the changes though this may take a while.</li>
+</ul>
+<p>Note that if I wanted to organize the files to a sub-folder (not project root) then provided that folder lives at the same level as the .qmd referencing the image file, I would use this syntax: <code>![Caption](files/elephant.png)</code> – omitting the first forward slash.</p>
+</section>
+<section id="editing-the-image-insertion-syntax-so-that-you-have-a-caption-you-set-up-figure-referencing-you-edit-the-sizing-and-you-specify-location" class="level4" data-number="13.2.4.2">
+<h4 data-number="13.2.4.2" class="anchored" data-anchor-id="editing-the-image-insertion-syntax-so-that-you-have-a-caption-you-set-up-figure-referencing-you-edit-the-sizing-and-you-specify-location"><span class="header-section-number">13.2.4.2</span> Editing the image insertion syntax so that you have a caption, you set up figure referencing, you edit the sizing and you specify location</h4>
+<p>Most of the time, you are going to want to do five things when you include an image in a .qmd file. You will need to:</p>
+<ol type="1">
+<li>Identify the file, and identify its location to Quarto;</li>
+<li>Add a caption;</li>
+<li>Add a hidden figure label so that you can refer to the image later;</li>
+<li>Specify the size of the output image;</li>
+<li>Add alt text (for html output) to enable accessibility for people using screen readers.</li>
+</ol>
+<p>We have seen that you use syntax like this:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="sc">!</span>[rstudio<span class="sc">-</span>edits<span class="sc">-</span>changes<span class="sc">-</span>git<span class="sc">-</span>files](<span class="sc">/</span>files<span class="sc">/</span>rstudio<span class="sc">-</span>edits<span class="sc">-</span>changes<span class="sc">-</span>git<span class="sc">-</span>files.png)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li>to <code>![...]</code> add caption text;</li>
+<li>to <code>(/files/...)</code> identify the location of the folder holding the image file, by naming the folder <code>files</code>, and specifying its location relative to the root (the top level) of the project folder <code>/.../</code>;</li>
+<li>to <code>...(...rstudio-edits-changes-git-files.png)</code> identify the file holding the image we want to present.</li>
+</ul>
+<p>If we use the following code, we can specify further information:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="sc">!</span>[rstudio<span class="sc">-</span>edits<span class="sc">-</span>changes<span class="sc">-</span>git<span class="sc">-</span>files](<span class="sc">/</span>files<span class="sc">/</span>rstudio<span class="sc">-</span>edits<span class="sc">-</span>changes<span class="sc">-</span>git<span class="sc">-</span>files.png){<span class="co">#fig-rstudio-edits-changes-git-files width=60% fig-align="center" fig-alt="RStudio Git Window listing of file changes"}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>In the <code>{...}</code> curly brackets, located immediately after the image file <code>()</code> we can specify:</p>
+<ul>
+<li><code>fig-...</code> a figure label;</li>
+<li><code>width = ...</code> image relative size information;</li>
+<li><code>fig-align = ...</code> alignment information;</li>
+<li><code>fig-alt="..."</code> alt text to enable accessible reading of our webpage.</li>
+</ul>
+<p>Notice that different elements are separated by a single space inside <code>{...}</code>.</p>
+<p>I can reference a figure using this cross-reference code:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="sc">@</span>fig<span class="sc">-</span>rstudio<span class="sc">-</span>edits<span class="sc">-</span>changes<span class="sc">-</span>git<span class="sc">-</span>files</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Provided Quarto can find the label <code>fig-rstudio-edits-changes-git-files</code>, using this code will let me say <q>I am referring to this <a href="#fig-rstudio-edits-changes-git-files" class="quarto-xref">Figure&nbsp;<span>13.1</span></a></q>. Here, Quarto replaces the code with an automatically numbered reference (and in html, live link to the image).</p>
 
 
+</section>
+</section>
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

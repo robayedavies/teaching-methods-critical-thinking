@@ -26,6 +26,7 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+q { quotes: "“" "”" "‘" "’"; }
 /* CSS for syntax highlighting */
 html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
@@ -112,6 +113,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }</script>
 
 
+<link rel="stylesheet" href="styles.css">
 </head>
 
 <body class="nav-sidebar floating quarto-light">
@@ -320,7 +322,7 @@ Figure&nbsp;11.1: GitHub new repo
 </figcaption>
 </figure>
 </div>
-<p>Near ‘Repositories’, click the big green ‘New’ button. Or, if you are on your own profile page, click on ‘Repositories’, then click the big green ‘New’ button.</p>
+<p>Near <q>Repositories</q>, click the big green <q>New</q> button. Or, if you are on your own profile page, click on <q>Repositories</q>, then click the big green <q>New</q> button.</p>
 </section>
 <section id="name-the-repository-add-a-description-keep-it-public-add-a-readme-add-.gitignore-add-a-license" class="level3" data-number="11.2.2">
 <h3 data-number="11.2.2" class="anchored" data-anchor-id="name-the-repository-add-a-description-keep-it-public-add-a-readme-add-.gitignore-add-a-license"><span class="header-section-number">11.2.2</span> Name the repository, add a description, keep it public, add a README, add .gitignore, add a license</h3>
@@ -381,7 +383,17 @@ Figure&nbsp;11.5: rstudio-create-project-version-control
 </div>
 <p>We will be cloning a project from a Git repository: the repo we just created.</p>
 <p>File &gt; New Project &gt; Version control &gt; Git</p>
-<p><img src="./files/rstudio-create-project-version-control-git.png" id="fig-rstudio-create-project-version-control-git" class="img-fluid quarto-figure quarto-figure-center anchored" style="width:60.0%" alt="rstudio-create-project-version-control-git"> Enter the URL from the GitHub repository</p>
+<div id="fig-rstudio-create-project-version-control-git" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-rstudio-create-project-version-control-git-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="./files/rstudio-create-project-version-control-git.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-create-project-version-control-git-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;11.6: rstudio-create-project-version-control-git
+</figcaption>
+</figure>
+</div>
+<p>Enter the URL from the GitHub repository.</p>
 <ul>
 <li>Remember where we got the URL:</li>
 </ul>
@@ -391,7 +403,7 @@ Figure&nbsp;11.5: rstudio-create-project-version-control
 <img src="./files/github-new-repo-url.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-new-repo-url-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.6: github-new-repo-url
+Figure&nbsp;11.7: github-new-repo-url
 </figcaption>
 </figure>
 </div>
@@ -402,7 +414,7 @@ Figure&nbsp;11.6: github-new-repo-url
 <img src="./files/rstudio-create-project-version-control-git-url.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-create-project-version-control-git-url-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.7: rstudio-create-project-version-control-git-url
+Figure&nbsp;11.8: rstudio-create-project-version-control-git-url
 </figcaption>
 </figure>
 </div>
@@ -414,7 +426,7 @@ Figure&nbsp;11.7: rstudio-create-project-version-control-git-url
 <img src="./files/mac-finder-project.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-mac-finder-project-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.8: mac-finder-project
+Figure&nbsp;11.9: mac-finder-project
 </figcaption>
 </figure>
 </div>
@@ -437,7 +449,7 @@ Figure&nbsp;11.8: mac-finder-project
 <img src="./files/rstudio-git-commit.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-git-commi-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.9: rstudio-git-commi
+Figure&nbsp;11.10: rstudio-git-commi
 </figcaption>
 </figure>
 </div>
@@ -452,7 +464,7 @@ Figure&nbsp;11.9: rstudio-git-commi
 <img src="./files/rstudio-git-commit-message.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-git-commit-message-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.10: rstudio-git-commit-message
+Figure&nbsp;11.11: rstudio-git-commit-message
 </figcaption>
 </figure>
 </div>
@@ -467,7 +479,7 @@ Figure&nbsp;11.10: rstudio-git-commit-message
 <img src="./files/rstudio-git-commit-message-push.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-git-commit-message-push-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.11: rstudio-git-commit-message-push
+Figure&nbsp;11.12: rstudio-git-commit-message-push
 </figcaption>
 </figure>
 </div>
@@ -483,7 +495,7 @@ Figure&nbsp;11.11: rstudio-git-commit-message-push
 <img src="./files/github-commits-edits.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-commits-edits-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.12: github-commits-edits
+Figure&nbsp;11.13: github-commits-edits
 </figcaption>
 </figure>
 </div>
@@ -497,7 +509,7 @@ Figure&nbsp;11.12: github-commits-edits
 <img src="./files/rstudio-git-pull.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-git-pull-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.13: rstudio-git-pulln
+Figure&nbsp;11.14: rstudio-git-pulln
 </figcaption>
 </figure>
 </div>
@@ -521,7 +533,7 @@ Figure&nbsp;11.13: rstudio-git-pulln
 <img src="./files/rstudio-terminal-quarto-create-book.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-terminal-quarto-create-book-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.14: rstudio-terminal-quarto-create-book
+Figure&nbsp;11.15: rstudio-terminal-quarto-create-book
 </figcaption>
 </figure>
 </div>
@@ -535,7 +547,7 @@ Figure&nbsp;11.14: rstudio-terminal-quarto-create-book
 <img src="./files/rstudio-files-project-book-files.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-files-project-book-files-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.15: rstudio-files-project-book-files
+Figure&nbsp;11.16: rstudio-files-project-book-files
 </figcaption>
 </figure>
 </div>
@@ -549,7 +561,7 @@ Figure&nbsp;11.15: rstudio-files-project-book-files
 <img src="./files/rstudio-script-yaml-defaults.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-script-yaml-defaults-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.16: rstudio-script-yaml-defaults
+Figure&nbsp;11.17: rstudio-script-yaml-defaults
 </figcaption>
 </figure>
 </div>
@@ -569,7 +581,7 @@ Figure&nbsp;11.16: rstudio-script-yaml-defaults
 <img src="./files/rstudio-terminal-quarto-preview.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-terminal-quarto-preview-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.17: rstudio-terminal-quarto-preview
+Figure&nbsp;11.18: rstudio-terminal-quarto-preview
 </figcaption>
 </figure>
 </div>
@@ -580,7 +592,7 @@ Figure&nbsp;11.17: rstudio-terminal-quarto-preview
 <img src="./files/safari-browser-quarto-preview.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-safari-browser-quarto-preview-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.18: safari-browser-quarto-preview
+Figure&nbsp;11.19: safari-browser-quarto-preview
 </figcaption>
 </figure>
 </div>
@@ -596,7 +608,7 @@ GET: /</code></pre>
 <p>There are two ways to do this:</p>
 <ol type="1">
 <li>The simplest: run <code>quarto publish gh-pages</code> from the Terminal. This renders the book, pushes it to an auto-created <code>gh-pages</code> branch, and <code>GitHub Pages</code> picks it up automatically.</li>
-<li>Alternative: set ‘output-dir: docs’ in _quarto.yml, render, commit the docs/ folder, add a .nojekyll file, and point GitHub Pages at the docs/ folder in Settings &gt; Pages.</li>
+<li>Alternative: set <q>output-dir: docs</q> in _quarto.yml, render, commit the docs/ folder, add a .nojekyll file, and point GitHub Pages at the docs/ folder in Settings &gt; Pages.</li>
 </ol>
 <p>I am going to use the second route.</p>
 </section>
@@ -612,7 +624,7 @@ GET: /</code></pre>
 <img src="./files/rstudio-script-yaml-book-docs.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-script-yaml-book-docs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.19: rstudio-script-yaml-book-docs
+Figure&nbsp;11.20: rstudio-script-yaml-book-docs
 </figcaption>
 </figure>
 </div>
@@ -630,7 +642,7 @@ Figure&nbsp;11.19: rstudio-script-yaml-book-docs
 <img src="./files/rstudio-git-commit-new-all.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-git-commit-new-all-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.20: rstudio-git-commit-new-all
+Figure&nbsp;11.21: rstudio-git-commit-new-all
 </figcaption>
 </figure>
 </div>
@@ -646,7 +658,7 @@ Figure&nbsp;11.20: rstudio-git-commit-new-all
 <img src="./files/rstudio-git-pull-license-edit.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rstudio-git-pull-license-edit-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.21: rstudio-git-pull-license-edit
+Figure&nbsp;11.22: rstudio-git-pull-license-edit
 </figcaption>
 </figure>
 </div>
@@ -661,7 +673,7 @@ Figure&nbsp;11.21: rstudio-git-pull-license-edit
 <img src="./files/github-pages-point-to-docs.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-pages-point-to-docs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.22: github-pages-point-to-docs
+Figure&nbsp;11.23: github-pages-point-to-docs
 </figcaption>
 </figure>
 </div>
@@ -678,7 +690,7 @@ Figure&nbsp;11.22: github-pages-point-to-docs
 <img src="./files/github-deployment.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-deployment-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.23: github-deployment
+Figure&nbsp;11.24: github-deployment
 </figcaption>
 </figure>
 </div>
@@ -691,7 +703,7 @@ Figure&nbsp;11.23: github-deployment
 <img src="./files/github-deployment-info.png" class="img-fluid quarto-figure quarto-figure-center figure-img" style="width:60.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-github-deployment-infot-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;11.24: github-deployment-info
+Figure&nbsp;11.25: github-deployment-info
 </figcaption>
 </figure>
 </div>
