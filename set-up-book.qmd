@@ -1,3 +1,242 @@
 ---
 title: "Setting up a book in Quarto"
 ---
+
+## Introduction
+
+We want the production of the book to be self-documenting. This will allow us to share Quarto process information. Opening chapters begin with book level stuff. Later chapters focus on within-chapter content writing and editing.
+
+This chapter gets you from nothing to the skeleton structure of a book, published as live webpages through GitHub Pages.
+
+## New project, GitHub first
+
+We are going to take an approach set out here (there are others). It helps us to understand how to work where there is an existing GitHub repository.
+
+<https://happygitwithr.com/new-github-first>
+
+### Make a repo on GitHub
+
+Go to <https://github.com> and make sure you are logged in.
+
+You will see your profile page.
+
+![GitHub new repo](/files/github-new-repo.png){#fig-github-new-repo width=60% fig-align="center"}
+
+Near 'Repositories', click the big green 'New' button. Or, if you are on your own profile page, click on 'Repositories', then click the big green 'New' button.
+
+### Name the repository, add a description, keep it public, add a README, add .gitignore, add a license
+
+![github-new-repo-name-public](/files/github-new-repo-name-public.png){#fig-github-new-repo-name-public width=60% fig-align="center"}
+
+You will have to enter some information:
+
+- Repository template: No template.
+- Repository name: myrepo or whatever you wish to name your new project. Approach this similar to a variable name, in code: descriptive but brief, no whitespace. Letters, digits, `-`, `.`, or `_` are allowed.
+- Description: any short description of the project.
+- Public.
+- Initialize this repository with: `Add a README file`.
+- Click the big green button that says `Create repository`.
+
+![github-new-repo-name-public-values](/files/github-new-repo-name-public-values.png){#fig-github-new-repo-name-public-values width=60% fig-align="center"}
+
+Now click the big green button that says `<> Code`. Copy a clone URL to your clipboard. You will need this for the R-Studio side of the set-up.
+
+![github-new-repo-url](/files/github-new-repo-url.png){#fig-github-new-repo-url width=60% fig-align="center"}
+
+### Now, in RStudio, set up a project (GitHub repo first)
+
+We are going to create a project, using version control.
+
+File \> New Project \> Version control
+
+![rstudio-create-project-version-control](/files/rstudio-create-project-version-control.png){#fig-rstudio-create-project-version-control width=60% fig-align="center"}
+
+We will be cloning a project from a Git repository: the repo we just created.
+
+File \> New Project \> Version control \> Git
+
+![rstudio-create-project-version-control-git](/files/rstudio-create-project-version-control-git.png){#fig-rstudio-create-project-version-control-git width=60% fig-align="center"} Enter the URL from the GitHub repository
+
+- Remember where we got the URL:
+
+![github-new-repo-url](/files/github-new-repo-url.png){#fig-github-new-repo-url width=60% fig-align="center"}
+
+In RStudio, enter the URL in the `Clone Git Repository` dialogue box.
+
+![rstudio-create-project-version-control-git-url](/files/rstudio-create-project-version-control-git-url.png){#fig-rstudio-create-project-version-control-git-url width=60% fig-align="center"}
+
+Click on **`Create Project`**.
+
+The project folder (and all its contents) is now on your local hard drive.
+
+![mac-finder-project](/files/mac-finder-project.png){#fig-mac-finder-project width=60% fig-align="center"}
+
+### Check that our local drive and the remote repository are connected
+
+Now, in RStudio, you can check that your local drive folder and the remote repository on GitHub are connected.
+
+- Open the `README.md`. Edit it. Save the edit.
+- Click on the `Git` tab (top right window). Notice that the `README.md` file is now associated with a blue M under Status.
+
+In RStudio \> Git
+
+- Click on the button box under `Staged` to get a tick in the box.
+- Click on the `Commit` button above.
+
+![rstudio-git-commi](/files/rstudio-git-commit.png){#fig-rstudio-git-commi width=60% fig-align="center"}
+
+- A window opens.
+- Review the changes you have staged. Deletions are shown in red. Additions are shown in green.
+- Enter a brief but informative message in the commit message box. Click on Commit.
+
+![rstudio-git-commit-message](/files/rstudio-git-commit-message.png){#fig-rstudio-git-commit-message width=60% fig-align="center"}
+
+- Best practice advice is to commit often, push less frequently.
+
+- RStudio \> Git We click on `Push` to test the connection.
+
+Assuming the connection is good, clicking on the `Push` will show you a window showing a summary of what has been changed in (pushed up to) the repo.
+
+![rstudio-git-commit-message-push](/files/rstudio-git-commit-message-push.png){#fig-rstudio-git-commit-message-push width=60% fig-align="center"}
+
+Now, in GitHub, you can check that your local drive folder and the remote repository on GitHub are connected.
+
+- At the repo webpage, you can see the commit message, a with a timestamp.
+- This is why it is wise to write informative messages: you want to know what you did when.
+- You can click on a file name to see the edits.
+
+![github-commits-edits](/files/github-commits-edits.png){#fig-github-commits-edits width=60% fig-align="center"}
+
+That was pushing. How about pulling?
+
+- Click on the `Pull` button.
+
+![rstudio-git-pulln](/files/rstudio-git-pull.png){#fig-rstudio-git-pull width=60% fig-align="center"}
+
+- It works i.e. you can get changes to the repository downloaded to your local drive but there are no changes and everything is up to date.
+
+### Create a new book
+
+Let’s say I don’t already have a book but I want to create a book, and I want to make a Quarto book. We can create a set of files to act as a skeleton for the book we are going to write.
+
+In RStudio, in the terminal, we write the command:
+
+```bash
+quarto create project book .
+```
+
+The trailing dot tells Quarto to use the current directory rather than making a new subfolder.
+
+- You will be asked to enter a title.
+
+In the terminal, you will see results that look like this. The directory information will be different.
+
+![rstudio-terminal-quarto-create-book](/files/rstudio-terminal-quarto-create-book.png){#fig-rstudio-terminal-quarto-create-book width=60% fig-align="center"}
+
+This bash code (a sequence of code entered at the terminal) creates \_quarto.yml, index.qmd, intro.qmd, summary.qmd, references.qmd, and references.bib.
+
+- You can see these files have appeared in the folder you are working with.
+
+![rstudio-files-project-book-files](/files/rstudio-files-project-book-files.png){#fig-rstudio-files-project-book-files width=60% fig-align="center"}
+
+### Working with the book yaml
+
+In RStudio, in the script window, in the open `_quarto.yml` file, we can see some pre-populated information and the title we entered.
+
+![rstudio-script-yaml-defaults](/files/rstudio-script-yaml-defaults.png){#fig-rstudio-script-yaml-defaults width=60% fig-align="center"}
+
+- Edit the yaml to substitute the prepopulated author name with your name.
+- Save.
+
+### Preview what we have got so far.
+
+Click on `Render` in RStudio, or run `quarto preview` in the Terminal.
+
+Your default browser will open a live preview that updates as you edit and save .qmd files.
+
+Let’s say I run `quarto preview` in the terminal. This is what I see in the terminal.
+
+![rstudio-terminal-quarto-preview](/files/rstudio-terminal-quarto-preview.png){#fig-rstudio-terminal-quarto-preview width=60% fig-align="center"}
+
+A new webpage tab should open. Here is what Safari shows me:
+
+![safari-browser-quarto-preview](/files/safari-browser-quarto-preview.png){#fig-safari-browser-quarto-preview width=60% fig-align="center"}
+
+Notice that in RStudio \> Terminal, you can see a red button and the message
+
+```         
+Watching files for changes
+Browse at http://localhost:5105/
+Listening on http://127.0.0.1:5105/
+GET: /
+```
+
+- Click on the red button and the Preview stops.
+
+This preview is local to you. In the next step, we publish what we have got so far so anyone can view it, if they have the URL.
+
+There are two ways to do this:
+
+1.  The simplest: run `quarto publish gh-pages` from the Terminal. This renders the book, pushes it to an auto-created `gh-pages` branch, and `GitHub Pages` picks it up automatically.
+2.  Alternative: set 'output-dir: docs' in \_quarto.yml, render, commit the docs/ folder, add a .nojekyll file, and point GitHub Pages at the docs/ folder in Settings \> Pages.
+
+I am going to use the second route.
+
+### Publish your new book to live webpages
+
+In Rstudio, in the script window, in `_quarto.yml`, set the output directory.
+
+- Edit the yaml, adding on a new line: `output-dir: docs`.
+
+![rstudio-script-yaml-book-docs](/files/rstudio-script-yaml-book-docs.png){#fig-rstudio-script-yaml-book-docs width=60% fig-align="center"}
+
+In Rstudio, in the terminal, enter `touch .nojekyll`.
+
+Add a .nojekyll file to your repo root (touch .nojekyll in Terminal, or copy NUL .nojekyll on Windows). This stops GitHub from running its own Jekyll processor over your site, which can break Quarto's output.
+
+In Rstudio, in the terminal, `quarto render`.
+
+- The terminal will display its progress through the rendering process.
+- A review of the contents of the folder will show the new /docs/ folder.
+
+In Rstudio, in git, commit all the new files. Then push.
+
+![rstudio-git-commit-new-all](/files/rstudio-git-commit-new-all.png){#fig-rstudio-git-commit-new-all width=60% fig-align="center"}
+
+Commit all new book files.
+
+#### Fix the license
+
+We might not have already done this but we need to choose a license for our materials.
+
+In GitHub, change the license to CC.0
+
+Before doing anything else, I pull this remote change to the local version.
+
+![rstudio-git-pull-license-edit](/files/rstudio-git-pull-license-edit.png){#fig-rstudio-git-pull-license-edit width=60% fig-align="center"}
+
+#### Publish the book
+
+Point GitHub Pages at /docs
+
+On GitHub.com, go to your repo's Settings \> Pages. Under `Build and deployment`, set Source to `Deploy from a branch`, Branch to `main`, and folder to `/docs`. Save.
+
+![github-pages-point-to-docs](/files/github-pages-point-to-docs.png){#fig-github-pages-point-to-docs width=60% fig-align="center"}
+
+#### Check the live site
+
+GitHub will build and deploy within a minute or two. Your site will be live at https://<username>.github.io/<reponame>/. Any time you edit content, re-run quarto render, commit the updated docs/ folder, and push — no separate publish command needed with this method.
+
+- You can see that the book has now deployed to a live webpage in the Deployments column of the GitHub view of your repository.
+
+![github-deployment](/files/github-deployment.png){#fig-github-deployment width=60% fig-align="center"}
+
+- If you click on the button `github-pages`, you get taken to a deployment information window:
+
+![github-deployment-info](/files/github-deployment-info.png){#fig-github-deployment-infot width=60% fig-align="center"}
+
+- where you can see a link (shown as the URL) to the now live webpage:
+
+<https://robayedavies.github.io/teaching-methods-critical-thinking/>
+
+Let’s move next to write or to make edits to some content.

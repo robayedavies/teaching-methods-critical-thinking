@@ -37,7 +37,7 @@ book:
 
 bibliography: references.bib
 
-editor: visual
+editor: source
 
 format:
   html:
