@@ -26,7 +26,6 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-q { quotes: "“" "”" "‘" "’"; }
 /* CSS for syntax highlighting */
 html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
@@ -72,7 +71,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./references.html" rel="next">
+<link href="./working-with-citations.html" rel="next">
 <link href="./workflow-overview.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -240,6 +239,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="./markdown-basics.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Introduction working with Quarto</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./working-with-citations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Working with citations, references, and citation style guides</span></span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -663,7 +668,7 @@ Note&nbsp;13.2: Optional heading
 <ul>
 <li>I create the new folder: <code>files</code> in the book project folder.</li>
 <li>I copy the screen shot .png files into the <code>/files/</code> folder.</li>
-<li>I commit the change: <q>Create a new files folder, and copy in screen shot images.</q></li>
+<li>I commit the change: “Create a new files folder, and copy in screen shot images.”</li>
 <li>I push the changes though this may take a while.</li>
 </ul>
 <p>Note that if I wanted to organize the files to a sub-folder (not project root) then provided that folder lives at the same level as the .qmd referencing the image file, I would use this syntax: <code>![Caption](files/elephant.png)</code> – omitting the first forward slash.</p>
@@ -703,7 +708,7 @@ Note&nbsp;13.2: Optional heading
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="sc">@</span>fig<span class="sc">-</span>rstudio<span class="sc">-</span>edits<span class="sc">-</span>changes<span class="sc">-</span>git<span class="sc">-</span>files</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>Provided Quarto can find the label <code>fig-rstudio-edits-changes-git-files</code>, using this code will let me say <q>I am referring to this <a href="#fig-rstudio-edits-changes-git-files" class="quarto-xref">Figure&nbsp;<span>13.1</span></a></q>. Here, Quarto replaces the code with an automatically numbered reference (and in html, live link to the image).</p>
+<p>Provided Quarto can find the label <code>fig-rstudio-edits-changes-git-files</code>, using this code will let me say “I am referring to this <a href="#fig-rstudio-edits-changes-git-files" class="quarto-xref">Figure&nbsp;<span>13.1</span></a>”. Here, Quarto replaces the code with an automatically numbered reference (and in html, live link to the image).</p>
 
 
 </section>
@@ -1118,8 +1123,8 @@ Note&nbsp;13.2: Optional heading
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./references.html" class="pagination-link" aria-label="References">
-        <span class="nav-page-text">References</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./working-with-citations.html" class="pagination-link" aria-label="Working with citations, references, and citation style guides">
+        <span class="nav-page-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Working with citations, references, and citation style guides</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

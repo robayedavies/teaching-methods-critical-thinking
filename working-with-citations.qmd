@@ -1,0 +1,96 @@
+---
+title: "Working with citations, references, and citation style guides"
+---
+
+## Working with citations
+
+You will be working with reference information.
+
+Th Quarto guide to working with citations is here:
+
+<https://quarto.org/docs/authoring/citations.html>
+
+As it says there:
+
+Quarto will use Pandoc to automatically generate citations and a bibliography in a number of styles. To use this capability, you will need:
+
+- A quarto document formatted with citations (see Citation Markdown).
+- A bibliographic data source, for example a BibLaTeX (.bib) or BibTeX (.bibtex) file.
+- Optionally, a CSL file which specifies the formatting to use when generating the citations and bibliography (when not using natbib or biblatex to generate the bibliography).
+
+We will need to build a references list as we develop our writing, and we will want the citations in text and the reference list or lists that are produced to be presented following APA 7 style guidance.
+
+### You will need a reference manager: Zotero is good.
+
+I assume that you can work with a reference manager like Zotero:
+
+<https://www.zotero.org>
+
+#### Install and open Zotero
+
+Have Zotero open and running on your machine while you write. 
+
+RStudio's Visual Editor auto-detects a local Zotero installation and reads your library directly: no separate setup or API key needed for basic use.
+
+#### Switch to Visual Editor mode
+
+In RStudio, open your .qmd file and click the 'Visual' tab (top-left of the source pane, next to 'Source'). 
+
+This switches from raw markdown editing to a WYSIWYG-style view that supports the citation picker. 
+
+You can switch back to Source mode any time — the underlying markdown is identical either way e.g.
+
+```{r}
+#| eval: false
+@knuth84
+```
+
+- If you write this key, then you get: @knuth84 -- where you do the citation.
+
+#### Insert a citation
+
+With cursor where you want a citation, go to Insert > Citation (or the keyboard shortcut Cmd/Ctrl+Shift+F8). 
+
+Choose 'Your Zotero Library' as the source, search for the reference, and select it.
+
+#### Quarto auto-adds it to references.bib
+
+When you insert a Zotero citation this way, Quarto automatically adds the full reference entry to your references.bib file and inserts the citation key at your cursor — you don't need to manually export or copy anything.
+
+#### (Optional) Install Better BibTeX for stable citation keys
+
+By default Zotero generates citation keys like `davies2026` automatically. If you want more control over key format (e.g. author-year-word style, or matching a specific journal convention), install the Better BibTeX plugin for Zotero, then in RStudio go to Tools > Global Options > R Markdown > Citations and enable 'Use Better BibTeX for citation keys'. 
+### Using a required style
+
+We will need to present citations and the reference list using APA 7 style.
+
+#### Download the APA CSL file
+
+Go to <https://www.zotero.org/styles> and search 'APA'. 
+
+Click on 'American Psychological Association 7th edition'.
+
+On the style's page, right-click the download/link icon and choose 'Save Link As' to download the raw .csl file rather than letting your browser install it into Zotero.
+
+#### Save it into your book's project folder
+
+Rename the downloaded file to something like apa.csl if it isn't already, and place it in your project root — the same folder as _quarto.yml, alongside references.bib.
+
+I am using `psychological-bulletin.csl` for now.
+
+#### Point _quarto.yml at the CSL file
+
+We edit the book yaml to add information on the .bib, the .csl, and how we want the citations to behave (in-text citations to hyperlink down to their entry in the reference list).
+
+```{r}
+#| eval: false
+bibliography: references.bib
+csl: psychological-bulletin.csl
+link-citations: true
+```
+
+#### Render and check citations
+
+Render or refresh your preview.
+
+Your in-text citations and bibliography will now follow APA formatting — e.g. (Davies, 2026) in-text, and a properly formatted APA reference list where your #refs div sits, instead of Pandoc's default numbered/bracketed style.

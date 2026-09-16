@@ -26,7 +26,6 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-q { quotes: "“" "”" "‘" "’"; }
 /* CSS for syntax highlighting */
 html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
@@ -242,6 +241,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Introduction working with Quarto</span></span></a>
   </div>
 </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./working-with-citations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Working with citations, references, and citation style guides</span></span></a>
+  </div>
+</li>
         <li class="sidebar-item sidebar-item-section">
       <span class="sidebar-item-text sidebar-link text-start">
  <span class="menu-text">References</span></span>
@@ -322,7 +327,7 @@ Figure&nbsp;11.1: GitHub new repo
 </figcaption>
 </figure>
 </div>
-<p>Near <q>Repositories</q>, click the big green <q>New</q> button. Or, if you are on your own profile page, click on <q>Repositories</q>, then click the big green <q>New</q> button.</p>
+<p>Near ‘Repositories’, click the big green ‘New’ button. Or, if you are on your own profile page, click on ‘Repositories’, then click the big green ‘New’ button.</p>
 </section>
 <section id="name-the-repository-add-a-description-keep-it-public-add-a-readme-add-.gitignore-add-a-license" class="level3" data-number="11.2.2">
 <h3 data-number="11.2.2" class="anchored" data-anchor-id="name-the-repository-add-a-description-keep-it-public-add-a-readme-add-.gitignore-add-a-license"><span class="header-section-number">11.2.2</span> Name the repository, add a description, keep it public, add a README, add .gitignore, add a license</h3>
@@ -608,7 +613,7 @@ GET: /</code></pre>
 <p>There are two ways to do this:</p>
 <ol type="1">
 <li>The simplest: run <code>quarto publish gh-pages</code> from the Terminal. This renders the book, pushes it to an auto-created <code>gh-pages</code> branch, and <code>GitHub Pages</code> picks it up automatically.</li>
-<li>Alternative: set <q>output-dir: docs</q> in _quarto.yml, render, commit the docs/ folder, add a .nojekyll file, and point GitHub Pages at the docs/ folder in Settings &gt; Pages.</li>
+<li>Alternative: set ‘output-dir: docs’ in _quarto.yml, render, commit the docs/ folder, add a .nojekyll file, and point GitHub Pages at the docs/ folder in Settings &gt; Pages.</li>
 </ol>
 <p>I am going to use the second route.</p>
 </section>

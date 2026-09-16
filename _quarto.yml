@@ -30,12 +30,15 @@ book:
     - set-up-book.qmd
     - workflow-overview.qmd    
     - markdown-basics.qmd
+    - working-with-citations.qmd
 
     - part: "References"
 
     - references.qmd
 
 bibliography: references.bib
+csl: psychological-bulletin.csl
+link-citations: true
 
 editor: source
 

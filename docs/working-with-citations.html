@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>8&nbsp; Criticality citation practice – Teaching critical thinking</title>
+<title>14&nbsp; Working with citations, references, and citation style guides – Teaching critical thinking</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -26,7 +26,62 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-</style>
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -36,8 +91,8 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./subjectivity-objectivity-virtues.html" rel="next">
-<link href="./criticality-in-visualization.html" rel="prev">
+<link href="./references.html" rel="next">
+<link href="./markdown-basics.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -89,7 +144,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./critical-citation-practice.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Criticality citation practice</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./working-with-citations.html"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Working with citations, references, and citation style guides</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -168,7 +223,7 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./critical-citation-practice.html" class="sidebar-item-text sidebar-link active">
+  <a href="./critical-citation-practice.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Criticality citation practice</span></span></a>
   </div>
 </li>
@@ -208,7 +263,7 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./working-with-citations.html" class="sidebar-item-text sidebar-link">
+  <a href="./working-with-citations.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Working with citations, references, and citation style guides</span></span></a>
   </div>
 </li>
@@ -227,15 +282,24 @@ ul.task-list li input[type="checkbox"] {
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#working-with-citations" id="toc-working-with-citations" class="nav-link active" data-scroll-target="#working-with-citations"><span class="header-section-number">14.1</span> Working with citations</a>
+  <ul class="collapse">
+  <li><a href="#you-will-need-a-reference-manager-zotero-is-good." id="toc-you-will-need-a-reference-manager-zotero-is-good." class="nav-link" data-scroll-target="#you-will-need-a-reference-manager-zotero-is-good."><span class="header-section-number">14.1.1</span> You will need a reference manager: Zotero is good.</a></li>
+  </ul></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Criticality citation practice</span></h1>
+<h1 class="title"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Working with citations, references, and citation style guides</span></h1>
 </div>
 
 
@@ -252,8 +316,88 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="working-with-citations" class="level2" data-number="14.1">
+<h2 data-number="14.1" class="anchored" data-anchor-id="working-with-citations"><span class="header-section-number">14.1</span> Working with citations</h2>
+<p>You will be working with reference information.</p>
+<p>Th Quarto guide to working with citations is here:</p>
+<p><a href="https://quarto.org/docs/authoring/citations.html" class="uri">https://quarto.org/docs/authoring/citations.html</a></p>
+<p>As it says there:</p>
+<p>Quarto will use Pandoc to automatically generate citations and a bibliography in a number of styles. To use this capability, you will need:</p>
+<ul>
+<li>A quarto document formatted with citations (see Citation Markdown).</li>
+<li>A bibliographic data source, for example a BibLaTeX (.bib) or BibTeX (.bibtex) file.</li>
+<li>Optionally, a CSL file which specifies the formatting to use when generating the citations and bibliography (when not using natbib or biblatex to generate the bibliography).</li>
+</ul>
+<p>We will need to build a references list as we develop our writing, and we will want the citations in text and the reference list or lists that are produced to be presented following APA 7 style guidance.</p>
+<section id="you-will-need-a-reference-manager-zotero-is-good." class="level3" data-number="14.1.1">
+<h3 data-number="14.1.1" class="anchored" data-anchor-id="you-will-need-a-reference-manager-zotero-is-good."><span class="header-section-number">14.1.1</span> You will need a reference manager: Zotero is good.</h3>
+<p>I assume that you can work with a reference manager like Zotero:</p>
+<p><a href="https://www.zotero.org" class="uri">https://www.zotero.org</a></p>
+<section id="install-and-open-zotero" class="level4" data-number="14.1.1.1">
+<h4 data-number="14.1.1.1" class="anchored" data-anchor-id="install-and-open-zotero"><span class="header-section-number">14.1.1.1</span> Install and open Zotero</h4>
+<p>Have Zotero open and running on your machine while you write.</p>
+<p>RStudio’s Visual Editor auto-detects a local Zotero installation and reads your library directly: no separate setup or API key needed for basic use.</p>
+</section>
+<section id="switch-to-visual-editor-mode" class="level4" data-number="14.1.1.2">
+<h4 data-number="14.1.1.2" class="anchored" data-anchor-id="switch-to-visual-editor-mode"><span class="header-section-number">14.1.1.2</span> Switch to Visual Editor mode</h4>
+<p>In RStudio, open your .qmd file and click the ‘Visual’ tab (top-left of the source pane, next to ‘Source’).</p>
+<p>This switches from raw markdown editing to a WYSIWYG-style view that supports the citation picker.</p>
+<p>You can switch back to Source mode any time — the underlying markdown is identical either way e.g.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="sc">@</span>knuth84</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li>If you write this key, then you get: <span class="citation" data-cites="knuth84">Knuth (<a href="references.html#ref-knuth84" role="doc-biblioref">1984</a>)</span> – where you do the citation.</li>
+</ul>
+</section>
+<section id="insert-a-citation" class="level4" data-number="14.1.1.3">
+<h4 data-number="14.1.1.3" class="anchored" data-anchor-id="insert-a-citation"><span class="header-section-number">14.1.1.3</span> Insert a citation</h4>
+<p>With cursor where you want a citation, go to Insert &gt; Citation (or the keyboard shortcut Cmd/Ctrl+Shift+F8).</p>
+<p>Choose ‘Your Zotero Library’ as the source, search for the reference, and select it.</p>
+</section>
+<section id="quarto-auto-adds-it-to-references.bib" class="level4" data-number="14.1.1.4">
+<h4 data-number="14.1.1.4" class="anchored" data-anchor-id="quarto-auto-adds-it-to-references.bib"><span class="header-section-number">14.1.1.4</span> Quarto auto-adds it to references.bib</h4>
+<p>When you insert a Zotero citation this way, Quarto automatically adds the full reference entry to your references.bib file and inserts the citation key at your cursor — you don’t need to manually export or copy anything.</p>
+</section>
+<section id="optional-install-better-bibtex-for-stable-citation-keys" class="level4" data-number="14.1.1.5">
+<h4 data-number="14.1.1.5" class="anchored" data-anchor-id="optional-install-better-bibtex-for-stable-citation-keys"><span class="header-section-number">14.1.1.5</span> (Optional) Install Better BibTeX for stable citation keys</h4>
+<p>By default Zotero generates citation keys like <code>davies2026</code> automatically. If you want more control over key format (e.g.&nbsp;author-year-word style, or matching a specific journal convention), install the Better BibTeX plugin for Zotero, then in RStudio go to Tools &gt; Global Options &gt; R Markdown &gt; Citations and enable ‘Use Better BibTeX for citation keys’. ### Using a required style</p>
+<p>We will need to present citations and the reference list using APA 7 style.</p>
+</section>
+<section id="download-the-apa-csl-file" class="level4" data-number="14.1.1.6">
+<h4 data-number="14.1.1.6" class="anchored" data-anchor-id="download-the-apa-csl-file"><span class="header-section-number">14.1.1.6</span> Download the APA CSL file</h4>
+<p>Go to <a href="https://www.zotero.org/styles" class="uri">https://www.zotero.org/styles</a> and search ‘APA’.</p>
+<p>Click on ‘American Psychological Association 7th edition’.</p>
+<p>On the style’s page, right-click the download/link icon and choose ‘Save Link As’ to download the raw .csl file rather than letting your browser install it into Zotero.</p>
+</section>
+<section id="save-it-into-your-books-project-folder" class="level4" data-number="14.1.1.7">
+<h4 data-number="14.1.1.7" class="anchored" data-anchor-id="save-it-into-your-books-project-folder"><span class="header-section-number">14.1.1.7</span> Save it into your book’s project folder</h4>
+<p>Rename the downloaded file to something like apa.csl if it isn’t already, and place it in your project root — the same folder as _quarto.yml, alongside references.bib.</p>
+<p>I am using <code>psychological-bulletin.csl</code> for now.</p>
+</section>
+<section id="point-_quarto.yml-at-the-csl-file" class="level4" data-number="14.1.1.8">
+<h4 data-number="14.1.1.8" class="anchored" data-anchor-id="point-_quarto.yml-at-the-csl-file"><span class="header-section-number">14.1.1.8</span> Point _quarto.yml at the CSL file</h4>
+<p>We edit the book yaml to add information on the .bib, the .csl, and how we want the citations to behave (in-text citations to hyperlink down to their entry in the reference list).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>bibliography<span class="sc">:</span> references.bib</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>csl<span class="sc">:</span> psychological<span class="sc">-</span>bulletin.csl</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>link<span class="sc">-</span>citations<span class="sc">:</span> true</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="render-and-check-citations" class="level4" data-number="14.1.1.9">
+<h4 data-number="14.1.1.9" class="anchored" data-anchor-id="render-and-check-citations"><span class="header-section-number">14.1.1.9</span> Render and check citations</h4>
+<p>Render or refresh your preview.</p>
+<p>Your in-text citations and bibliography will now follow APA formatting — e.g.&nbsp;(Davies, 2026) in-text, and a properly formatted APA reference list where your #refs div sits, instead of Pandoc’s default numbered/bracketed style.</p>
 
 
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list" style="display: none">
+<div id="ref-knuth84" class="csl-entry" role="listitem">
+Knuth, D. E. (1984). Literate programming. <em>Comput. J.</em>, <em>27</em>(2), 97–111. <a href="https://doi.org/10.1093/comjnl/27.2.97">https://doi.org/10.1093/comjnl/27.2.97</a>
+</div>
+</div>
+</section>
+</section>
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
@@ -658,13 +802,13 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./criticality-in-visualization.html" class="pagination-link" aria-label="Criticality in visualization">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Criticality in visualization</span></span>
+      <a href="./markdown-basics.html" class="pagination-link" aria-label="Introduction working with Quarto">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Introduction working with Quarto</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./subjectivity-objectivity-virtues.html" class="pagination-link" aria-label="Subjectivity, objectivity, and scientific virtues">
-        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Subjectivity, objectivity, and scientific virtues</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./references.html" class="pagination-link" aria-label="References">
+        <span class="nav-page-text">References</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
