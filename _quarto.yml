@@ -5,7 +5,7 @@ project:
 book:
   title: "Teaching critical thinking"
   author: "Rob Davies"
-  date: "9/15/2026"
+  date: today
   chapters:
 
     - index.qmd
