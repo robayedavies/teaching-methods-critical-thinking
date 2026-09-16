@@ -7,13 +7,37 @@ book:
   author: "Rob Davies"
   date: "9/15/2026"
   chapters:
+
     - index.qmd
-    - intro.qmd
-    - summary.qmd
+
+    - part: "Critical thinking"
+
+    - introduction.qmd
+
+    - how-science-works.qmd
+    - what-is-theory.qmd
+    - evaluating-evidence.qmd
+    - lying-cheating.qmd
+    - criticality-in-writing.qmd
+    - criticality-in-visualization.qmd
+    - critical-citation-practice.qmd
+    - subjectivity-objectivity-virtues.qmd
+
+    - conclusions.qmd    
+    
+    - part: "Quarto"
+
+    - set-up-book.qmd
+    - workflow-overview.qmd    
+    - markdown-basics.qmd
+
+    - part: "References"
+
     - references.qmd
-  license: "GNU General Public License v3.0"
 
 bibliography: references.bib
+
+editor: visual
 
 format:
   html:
