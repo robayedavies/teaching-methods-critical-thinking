@@ -1,3 +1,33 @@
 ---
 title: "How science works"
 ---
+
+## How does science work?
+
+How does science work? How do we think or claim that science works? How does it work 'really' or in practice?
+
+-   What we learn from the history and philosophy of science
+-   What we learn from scientometric or sociometric data
+-   What we learn from ethnographic analyses
+-   What these learnings get us, as researchers or research consumers or end users
+
+The aim is, first, to help students to develop an understanding of how scientists or metascientists (those who study science) have described and explained how science works or should work: objective seeking after truth (Merton); the assumption and falsification testing of hypotheses (Popper), risky hypotheses (Meehl); the consolidation and the disruption of scientific paradigms (Kuhn); networks of power (Bourdieu, Greenhalgh); science as a messy business in practice (Chang).
+
+In meeting this aim, we hope to enable students, second, to situate themselves appropriately as critically reflective *citizen scientists* within a scientific culture that is historically rooted and capable of change.
+
+Given their participation in class activities, students should be able to identify different ways of "doing science", and should be able to demonstrate an awareness of the conditions (including the inequities) or historical contingencies that may help to explain what scientists do.
+
+We may consider, also, as relevant to questions about why scientists choose to do what they do:
+
+-   MAHA, state capture, and the political co-option of scientific funding, and of scientific reform rhetoric, by the Trump administration
+-   Why the search for a malaria vaccination or other diseases affecting global majority populations has taken so long to find
+-   Funding cuts enacted by Trump administration (the MAHA movement, NIH, CDC cuts, personnel and policy changes); analogies to Soviet era science and Lysenko; ways in which the direction of science is influenced or manipulated
+
+### Readings
+
+1.  Merton -- objectivity, structuralism
+2.  Popper -- falsificationism [@popper2005]
+3.  Kuhn -- paradigms and scientific revolutions [@kuhn1970]
+4.  Bourdieu -- doxa, illusio and the game [@bourdieu2004; @greenhalgh2021]
+5.  Meehl -- crud, soft science [@meehl1967; @meehl1969; @meehl1978]
+6.  Chang -- operationalization is hard, science is messy [@chang2008]

@@ -1,3 +1,41 @@
 ---
 title: "Working with evidence"
 ---
+
+## Hypothesis testing, sampling, and power, precision, bias, and variation
+
+Given our research aims, objectives, theories or questions, how do we test our beliefs against the evidence that, in the empirical psychological sciences, we might typically expect to acquire?
+
+-   Null Hypothesis Significant Testing (NHST): dominant but mostly misunderstood – what it means, how we should do it versus how we actually do it
+-   NHST and sampling distributions, statistical ritual, the Bayesian id, significance and what it is claimed to show versus what it means: common misconceptions and misinterpretations
+-   Small samples, varying effects, and noisy estimates
+-   What is your estimand?
+-   The persistence of low power samples and reasons for this persistence
+-   Size and magnitude errors
+-   Variation as the target for research, individual differences
+-   What do 5000 babies tell us?
+-   Big data, the big data paradox and representativeness
+-   Meta-analysis, garbage-in and garbage-out, and the difficulties of synthesis
+
+The dominant paradigm in psychological science comprises a procedure centered on what is known as *Null Hypothesis Significance Testing* (NHST). This procedure is difficult to teach and understand and is mostly taught incorrectly or misunderstood (or so studies of NHST suggest). What does it involve? What are the common misunderstandings? What, actually, do we want to do when we want to test our beliefs against evidence, or to learn from our observations?
+
+What is the value of evidence that derives from the samples we often see (in papers) or that we expect to collect in the psychological sciences? We consider theory or belief testing in the context of the practical realities of how scientific research is (imperfectly) realized by human researchers to more or less useful ends. What do we learn from recent crises about problematic or questionable research practices (to the extent they exist)? How do we identify a way to reason effectively about evidence or claims about evidence, by comparison?
+
+-   How we reason about evidence, severe testing, risky hypotheses, and scientific uncertainties
+-   The complexities of scientific operationalisation
+-   Not even wrong, when researchers report hypothesis tests but hypotheses are not specified
+-   Establishing causality with or without admitting causal language
+
+Our aim is, first, to equip students to understand what researchers say they are doing when they claim to be testing hypotheses, to identify what we can or cannot conclude from reported tests (tests as reported or presented versus tests as practised), given samples of various kinds (varying in size or representativeness).
+
+In meeting this aim, we hope, second, to enable students to critically evaluate the utility or quality of research findings, given reported tests and data samples. Concerns about the utility of NHST and the informativeness of samples of various kinds intersect, here, because limitations in sampling (e.g., the prevalence of small convenience samples in developmental research) combine with the inappropriate use of NHST, especially in the context of weak theories, to yield inconsistent, noisy, or uncertain estimates or tests.
+
+Given their learning, students should be able to calibrate their response to findings reported in individual reports, or in groups of reports, given study sample-test combinations or given field normative sampling test practices.
+
+### Readings
+
+@bornstein2013; @button2013; @gelman2015; @gelman2014; @gigerenzer2004; @gigerenzer2018; @gigerenzer2022; @greenland2016; @hoekstra2014; @lundberg2021; @maxwell2004; @maxwell2008; @sedlmeier1992; @vasishth2018; @vanzwet2022; @vanzwet2023
+
+See also:
+
+@candal-pedreira2020; @chang2008; ; @grosz2020; @joëts2026; @rohrer2018; @rohrer2024; @scheel2022

@@ -26,7 +26,27 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -227,8 +247,17 @@ ul.task-list li input[type="checkbox"] {
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#hypothesis-testing-sampling-and-power-precision-bias-and-variation" id="toc-hypothesis-testing-sampling-and-power-precision-bias-and-variation" class="nav-link active" data-scroll-target="#hypothesis-testing-sampling-and-power-precision-bias-and-variation"><span class="header-section-number">4.1</span> Hypothesis testing, sampling, and power, precision, bias, and variation</a>
+  <ul class="collapse">
+  <li><a href="#readings" id="toc-readings" class="nav-link" data-scroll-target="#readings"><span class="header-section-number">4.1.1</span> Readings</a></li>
+  </ul></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -252,8 +281,112 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<section id="hypothesis-testing-sampling-and-power-precision-bias-and-variation" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="hypothesis-testing-sampling-and-power-precision-bias-and-variation"><span class="header-section-number">4.1</span> Hypothesis testing, sampling, and power, precision, bias, and variation</h2>
+<p>Given our research aims, objectives, theories or questions, how do we test our beliefs against the evidence that, in the empirical psychological sciences, we might typically expect to acquire?</p>
+<ul>
+<li>Null Hypothesis Significant Testing (NHST): dominant but mostly misunderstood – what it means, how we should do it versus how we actually do it</li>
+<li>NHST and sampling distributions, statistical ritual, the Bayesian id, significance and what it is claimed to show versus what it means: common misconceptions and misinterpretations</li>
+<li>Small samples, varying effects, and noisy estimates</li>
+<li>What is your estimand?</li>
+<li>The persistence of low power samples and reasons for this persistence</li>
+<li>Size and magnitude errors</li>
+<li>Variation as the target for research, individual differences</li>
+<li>What do 5000 babies tell us?</li>
+<li>Big data, the big data paradox and representativeness</li>
+<li>Meta-analysis, garbage-in and garbage-out, and the difficulties of synthesis</li>
+</ul>
+<p>The dominant paradigm in psychological science comprises a procedure centered on what is known as <em>Null Hypothesis Significance Testing</em> (NHST). This procedure is difficult to teach and understand and is mostly taught incorrectly or misunderstood (or so studies of NHST suggest). What does it involve? What are the common misunderstandings? What, actually, do we want to do when we want to test our beliefs against evidence, or to learn from our observations?</p>
+<p>What is the value of evidence that derives from the samples we often see (in papers) or that we expect to collect in the psychological sciences? We consider theory or belief testing in the context of the practical realities of how scientific research is (imperfectly) realized by human researchers to more or less useful ends. What do we learn from recent crises about problematic or questionable research practices (to the extent they exist)? How do we identify a way to reason effectively about evidence or claims about evidence, by comparison?</p>
+<ul>
+<li>How we reason about evidence, severe testing, risky hypotheses, and scientific uncertainties</li>
+<li>The complexities of scientific operationalisation</li>
+<li>Not even wrong, when researchers report hypothesis tests but hypotheses are not specified</li>
+<li>Establishing causality with or without admitting causal language</li>
+</ul>
+<p>Our aim is, first, to equip students to understand what researchers say they are doing when they claim to be testing hypotheses, to identify what we can or cannot conclude from reported tests (tests as reported or presented versus tests as practised), given samples of various kinds (varying in size or representativeness).</p>
+<p>In meeting this aim, we hope, second, to enable students to critically evaluate the utility or quality of research findings, given reported tests and data samples. Concerns about the utility of NHST and the informativeness of samples of various kinds intersect, here, because limitations in sampling (e.g., the prevalence of small convenience samples in developmental research) combine with the inappropriate use of NHST, especially in the context of weak theories, to yield inconsistent, noisy, or uncertain estimates or tests.</p>
+<p>Given their learning, students should be able to calibrate their response to findings reported in individual reports, or in groups of reports, given study sample-test combinations or given field normative sampling test practices.</p>
+<section id="readings" class="level3" data-number="4.1.1">
+<h3 data-number="4.1.1" class="anchored" data-anchor-id="readings"><span class="header-section-number">4.1.1</span> Readings</h3>
+<p><span class="citation" data-cites="bornstein2013">Bornstein et al. (<a href="references.html#ref-bornstein2013" role="doc-biblioref">2013</a>)</span>; <span class="citation" data-cites="button2013">Button et al. (<a href="references.html#ref-button2013" role="doc-biblioref">2013</a>)</span>; <span class="citation" data-cites="gelman2015">Gelman (<a href="references.html#ref-gelman2015" role="doc-biblioref">2015</a>)</span>; <span class="citation" data-cites="gelman2014">Gelman &amp; Carlin (<a href="references.html#ref-gelman2014" role="doc-biblioref">2014</a>)</span>; <span class="citation" data-cites="gigerenzer2004">Gigerenzer (<a href="references.html#ref-gigerenzer2004" role="doc-biblioref">2004</a>)</span>; <span class="citation" data-cites="gigerenzer2018">Gigerenzer (<a href="references.html#ref-gigerenzer2018" role="doc-biblioref">2018</a>)</span>; <span class="citation" data-cites="gigerenzer2022">Gigerenzer (<a href="references.html#ref-gigerenzer2022" role="doc-biblioref">2022</a>)</span>; <span class="citation" data-cites="greenland2016">Greenland et al. (<a href="references.html#ref-greenland2016" role="doc-biblioref">2016</a>)</span>; <span class="citation" data-cites="hoekstra2014">Hoekstra et al. (<a href="references.html#ref-hoekstra2014" role="doc-biblioref">2014</a>)</span>; <span class="citation" data-cites="lundberg2021">Lundberg et al. (<a href="references.html#ref-lundberg2021" role="doc-biblioref">2021</a>)</span>; <span class="citation" data-cites="maxwell2004">Maxwell (<a href="references.html#ref-maxwell2004" role="doc-biblioref">2004</a>)</span>; <span class="citation" data-cites="maxwell2008">Maxwell et al. (<a href="references.html#ref-maxwell2008" role="doc-biblioref">2008</a>)</span>; <span class="citation" data-cites="sedlmeier1992">Sedlmeier &amp; Gigerenzer (<a href="references.html#ref-sedlmeier1992" role="doc-biblioref">1992</a>)</span>; <span class="citation" data-cites="vasishth2018">Vasishth et al. (<a href="references.html#ref-vasishth2018" role="doc-biblioref">2018</a>)</span>; <span class="citation" data-cites="vanzwet2022"><span class="nocase">van Zwet &amp; Goodman</span> (<a href="references.html#ref-vanzwet2022" role="doc-biblioref">2022</a>)</span>; <span class="citation" data-cites="vanzwet2023">Zwet et al. (<a href="references.html#ref-vanzwet2023" role="doc-biblioref">2023</a>)</span></p>
+<p>See also:</p>
+<p><span class="citation" data-cites="candal-pedreira2020">Candal-Pedreira et al. (<a href="references.html#ref-candal-pedreira2020" role="doc-biblioref">2020</a>)</span>; <span class="citation" data-cites="chang2008">Chang (<a href="references.html#ref-chang2008" role="doc-biblioref">2008</a>)</span>; ; <span class="citation" data-cites="grosz2020">Grosz et al. (<a href="references.html#ref-grosz2020" role="doc-biblioref">2020</a>)</span>; <span class="citation" data-cites="joëts2026">Joëts &amp; Mignon (<a href="references.html#ref-joëts2026" role="doc-biblioref">2026</a>)</span>; <span class="citation" data-cites="rohrer2018">Rohrer (<a href="references.html#ref-rohrer2018" role="doc-biblioref">2018</a>)</span>; <span class="citation" data-cites="rohrer2024">Rohrer (<a href="references.html#ref-rohrer2024" role="doc-biblioref">2024</a>)</span>; <span class="citation" data-cites="scheel2022">Scheel (<a href="references.html#ref-scheel2022" role="doc-biblioref">2022</a>)</span></p>
 
 
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list" style="display: none">
+<div id="ref-bornstein2013" class="csl-entry" role="listitem">
+Bornstein, M. H., Jager, J., &amp; Putnick, D. L. (2013). Sampling in developmental science: Situations, shortcomings, solutions, and standards. <em>Developmental Review</em>, <em>33</em>(4), 357–370. <a href="https://doi.org/10.1016/j.dr.2013.08.003">https://doi.org/10.1016/j.dr.2013.08.003</a>
+</div>
+<div id="ref-button2013" class="csl-entry" role="listitem">
+Button, K. S., Ioannidis, J. P. A., Mokrysz, C., Nosek, B. A., Flint, J., Robinson, E. S. J., &amp; Munafò, M. R. (2013). Power failure: Why small sample size undermines the reliability of neuroscience. <em>Nature Reviews Neuroscience</em>, <em>14</em>(5), 365–376. <a href="https://doi.org/10.1038/nrn3475">https://doi.org/10.1038/nrn3475</a>
+</div>
+<div id="ref-candal-pedreira2020" class="csl-entry" role="listitem">
+Candal-Pedreira, C., Ruano-Ravina, A., Fernández, E., Ramos, J., Campos-Varela, I., &amp; Pérez-Ríos, M. (2020). Does retraction after misconduct have an impact on citations? A pre<span></span>post study. <em>BMJ Global Health</em>, <em>5</em>(11). <a href="https://doi.org/10.1136/bmjgh-2020-003719">https://doi.org/10.1136/bmjgh-2020-003719</a>
+</div>
+<div id="ref-chang2008" class="csl-entry" role="listitem">
+Chang, H. (2008). <em>Inventing temperature: Measurement and scientific progress</em>. Oxford University Press.
+</div>
+<div id="ref-gelman2015" class="csl-entry" role="listitem">
+Gelman, A. (2015). The connection between varying treatment effects and the crisis of unreplicable research: A bayesian perspective. <em>Journal of Management</em>, <em>41</em>(2), 632–643. <a href="https://doi.org/10.1177/0149206314525208">https://doi.org/10.1177/0149206314525208</a>
+</div>
+<div id="ref-gelman2014" class="csl-entry" role="listitem">
+Gelman, A., &amp; Carlin, J. (2014). Beyond power calculations. <em>Perspectives on Psychological Science</em>, <em>9</em>(6), 641–651. <a href="https://doi.org/10.1177/1745691614551642">https://doi.org/10.1177/1745691614551642</a>
+</div>
+<div id="ref-gigerenzer2004" class="csl-entry" role="listitem">
+Gigerenzer, G. (2004). Mindless statistics. <em>The Journal of Socio-Economics</em>, <em>33</em>(5), 587–606. <a href="https://doi.org/10.1016/j.socec.2004.09.033">https://doi.org/10.1016/j.socec.2004.09.033</a>
+</div>
+<div id="ref-gigerenzer2018" class="csl-entry" role="listitem">
+Gigerenzer, G. (2018). Statistical rituals: The replication delusion and how we got there. <em>Advances in Methods and Practices in Psychological Science</em>, <em>1</em>(2), 198–218. <a href="https://doi.org/10.1177/2515245918771329">https://doi.org/10.1177/2515245918771329</a>
+</div>
+<div id="ref-gigerenzer2022" class="csl-entry" role="listitem">
+Gigerenzer, G. (2022). We need to think more about how we conduct research. <em>Behavioral and Brain Sciences</em>, <em>45</em>, e16. <a href="https://doi.org/10.1017/S0140525X21000327">https://doi.org/10.1017/S0140525X21000327</a>
+</div>
+<div id="ref-greenland2016" class="csl-entry" role="listitem">
+Greenland, S., Senn, S. J., Rothman, K. J., Carlin, J. B., Poole, C., Goodman, S. N., &amp; Altman, D. G. (2016). Statistical tests, p values, confidence intervals, and power: A guide to misinterpretations. <em>European Journal of Epidemiology</em>, <em>31</em>(4), 337–350. <a href="https://doi.org/10.1007/s10654-016-0149-3">https://doi.org/10.1007/s10654-016-0149-3</a>
+</div>
+<div id="ref-grosz2020" class="csl-entry" role="listitem">
+Grosz, M. P., Rohrer, J. M., &amp; Thoemmes, F. (2020). The taboo against explicit causal inference in nonexperimental psychology. <em>Perspectives on Psychological Science</em>, <em>15</em>(5), 1243–1255. <a href="https://doi.org/10.1177/1745691620921521">https://doi.org/10.1177/1745691620921521</a>
+</div>
+<div id="ref-hoekstra2014" class="csl-entry" role="listitem">
+Hoekstra, R., Morey, R. D., Rouder, J. N., &amp; Wagenmakers, E.-J. (2014). Robust misinterpretation of confidence intervals. <em>Psychonomic Bulletin &amp; Review</em>, <em>21</em>(5), 1157–1164. <a href="https://doi.org/10.3758/s13423-013-0572-3">https://doi.org/10.3758/s13423-013-0572-3</a>
+</div>
+<div id="ref-joëts2026" class="csl-entry" role="listitem">
+Joëts, M., &amp; Mignon, V. (2026). Slaying the undead: How long does it take to kill zombie papers? <em>Research Policy</em>, <em>55</em>(2), 105401. <a href="https://doi.org/10.1016/j.respol.2025.105401">https://doi.org/10.1016/j.respol.2025.105401</a>
+</div>
+<div id="ref-lundberg2021" class="csl-entry" role="listitem">
+Lundberg, I., Johnson, R., &amp; Stewart, B. M. (2021). What is your estimand? Defining the target quantity connects statistical evidence to theory. <em>American Sociological Review</em>, <em>86</em>(3), 532–565. <a href="https://doi.org/10.1177/00031224211004187">https://doi.org/10.1177/00031224211004187</a>
+</div>
+<div id="ref-maxwell2004" class="csl-entry" role="listitem">
+Maxwell, S. E. (2004). The persistence of underpowered studies in psychological research: Causes, consequences, and remedies. <em>Psychological Methods</em>, <em>9</em>(2), 147–163. <a href="https://doi.org/10.1037/1082-989X.9.2.147">https://doi.org/10.1037/1082-989X.9.2.147</a>
+</div>
+<div id="ref-maxwell2008" class="csl-entry" role="listitem">
+Maxwell, S. E., Kelley, K., &amp; Rausch, J. R. (2008). Sample size planning for statistical power and accuracy in parameter estimation. <em>Annual Review of Psychology</em>, <em>59</em>(1), 537–563. <a href="https://doi.org/10.1146/annurev.psych.59.103006.093735">https://doi.org/10.1146/annurev.psych.59.103006.093735</a>
+</div>
+<div id="ref-rohrer2018" class="csl-entry" role="listitem">
+Rohrer, J. M. (2018). Thinking clearly about correlations and causation: Graphical causal models for observational data. <em>Advances in Methods and Practices in Psychological Science</em>, <em>1</em>(1), 27–42. <a href="https://doi.org/10.1177/2515245917745629">https://doi.org/10.1177/2515245917745629</a>
+</div>
+<div id="ref-rohrer2024" class="csl-entry" role="listitem">
+Rohrer, J. M. (2024). Causal inference for psychologists who think that causal inference is not for them. <em>Social and Personality Psychology Compass</em>, <em>18</em>(3), e12948. <a href="https://doi.org/10.1111/spc3.12948">https://doi.org/10.1111/spc3.12948</a>
+</div>
+<div id="ref-scheel2022" class="csl-entry" role="listitem">
+Scheel, A. M. (2022). Why most psychological research findings are not even wrong. <em>Infant and Child Development</em>, <em>31</em>(1), e2295. <a href="https://doi.org/10.1002/icd.2295">https://doi.org/10.1002/icd.2295</a>
+</div>
+<div id="ref-sedlmeier1992" class="csl-entry" role="listitem">
+Sedlmeier, P., &amp; Gigerenzer, G. (1992). <em>Do studies of statistical power have an effect on the power of studies?</em>
+</div>
+<div id="ref-vanzwet2022" class="csl-entry" role="listitem">
+<span class="nocase">van Zwet, E. W., &amp; Goodman, S. N.</span> (2022). How large should the next study be? Predictive power and sample size requirements for replication studies. <em>Statistics in Medicine</em>, <em>41</em>(16), 3090–3101. <a href="https://doi.org/10.1002/sim.9406">https://doi.org/10.1002/sim.9406</a>
+</div>
+<div id="ref-vasishth2018" class="csl-entry" role="listitem">
+Vasishth, S., Mertzen, D., Jäger, L. A., &amp; Gelman, A. (2018). The statistical significance filter leads to overoptimistic expectations of replicability. <em>Journal of Memory and Language</em>, <em>103</em>, 151–175. <a href="https://doi.org/10.1016/j.jml.2018.07.004">https://doi.org/10.1016/j.jml.2018.07.004</a>
+</div>
+<div id="ref-vanzwet2023" class="csl-entry" role="listitem">
+Zwet, E. van, Gelman, A., Greenland, S., Imbens, G., Schwab, S., &amp; Goodman, S. N. (2023). A new look at p values for randomized clinical trials. <em>NEJM Evidence</em>, <em>3</em>(1), EVIDoa2300003. <a href="https://doi.org/10.1056/EVIDoa2300003">https://doi.org/10.1056/EVIDoa2300003</a>
+</div>
+</div>
+</section>
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

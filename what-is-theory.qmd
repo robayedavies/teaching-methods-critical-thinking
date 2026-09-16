@@ -1,3 +1,27 @@
 ---
 title: "What is theory?"
 ---
+
+## What is a good theory and what makes a theory good?
+
+As scientists, we often claim to build or to test theory: what is a theory, how can some theories work or be better than others?
+
+-   Theories and theory-like objects, theories and their distractors
+-   The theory 'crisis'
+-   Model- versus results-centric science
+-   Computational modeling as a driver of theory building
+-   If mathematical psychology did not exist we would have to invent it
+
+If we are not building theory, what are we doing (or should we be doing)? How do we get from concerns or questions about people and their attributes or behaviours to scientific research and (some of) its products: theoretical accounts or scientific understanding?
+
+Researchers have worked, or claimed to work, to improve research practices or processes (e.g., promulgating open science recommendations and building associated resources) but this focus on process has latterly revealed what some call the 'theory crisis'. There is now an understanding that hypothesis testing may be premature in some areas of research (where primary description may be more useful), that theories may be more or less weakly specified or ambiguous, and that we (as researchers or consumers of research) should demand or seek to build better or more useful theories.
+
+Our aim here is to enable students to identify, first, what theories look like, what features characterize good or better theories, and what theory-like objects look like, so that students can distinguish between theories and their distractors (e.g., acronyms, stories, metaphors or statistical summaries), and can identify theoretical accounts or their components, even when these accounts may not be explicitly communicated or identified as such in venues like journal articles.
+
+In meeting this aim, we hope, second, to enable students to critically evaluate research presentations that purport to (and do or do not) present theoretical accounts or tests of theoretical accounts, to parse such accounts for their constituent assumptions, to identify their limitations or weaknesses.
+
+Given their learning, students should be able to evaluate theories, propose modifications to theories, and develop research programmes aimed at probing or uncovering theoretical limitations or adjudicating between theoretical alternatives.
+
+### Readings
+
+@devezer2023; @frankenhuis2023; @gigerenzer1998; @guest2021; @guest2024; @navarro2021; @oberauer2019; @scheel2020; @smaldino2019; @vanrooij2020; @vanrooij2022
