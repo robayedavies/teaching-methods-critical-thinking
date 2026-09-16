@@ -55,7 +55,9 @@ We will be cloning a project from a Git repository: the repo we just created.
 
 File \> New Project \> Version control \> Git
 
-![rstudio-create-project-version-control-git](/files/rstudio-create-project-version-control-git.png){#fig-rstudio-create-project-version-control-git width=60% fig-align="center"} Enter the URL from the GitHub repository
+![rstudio-create-project-version-control-git](/files/rstudio-create-project-version-control-git.png){#fig-rstudio-create-project-version-control-git width=60% fig-align="center"} 
+
+Enter the URL from the GitHub repository.
 
 - Remember where we got the URL:
 
