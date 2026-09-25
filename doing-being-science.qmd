@@ -9,7 +9,132 @@ bibliography: references.bib
 csl: psychological-bulletin.csl
 ---
 
-## Introduction
+## What do you think about 
+
+## big ideas and difficult questions
+
+## the scientific method or methods versus pseudoscience
+## am I a crank or what? doing science versus being cranks 
+## doing science versus bullshitting, kinds of bullshit
+
+## careful organized observation
+## induction --- from observations, deduction --- to observations
+## being capable of being wrong
+## working in a community: universalism, communism, disinterestedness, organized skepticism
+## the history of science
+## puzzle solving
+## anomalies revolutionary change
+
+## where do ideas come from
+## how should go about developing ideas and testing them?
+
+## why learning about the world is hard
+## words for persuasion, words for logic
+
+## why learning about people is hard
+## the things we want to study are semi-random
+
+## numbers as simplifications, decontextualization allowing aggregation
+## Nguyen: the limits of data
+## Dennison: AI holes
+## Syed: quantitative and qualitative
+
+## models as simplifications, for prediction, for identification of what counts
+## Box
+
+## science as a thing that is done by people
+## working with people you don’t know or like or respect
+## peer review
+## systems and hierarchies of knowledge
+## money fame and power
+## biases and inequities
+## science as a thing with a history
+
+## students entering a field that has been through a period of revolution and the effects of that revolution are present everywhere we do teaching and learning
+## how we think about it and teach it is different from how we used to 20-30 years ago, and will continue to change
+
+
+## Meehl underlies everything now in effort after improvement 
+Popper through Meehl
+
+## how we should proceed:
+
+## cannot learn from affirming the consequent --- there are so many alternate explanations
+## but can do modus tollens
+
+## why that is harder for us --- why psychology is the hardest (most interesting) science:
+
+## theories and theory like objects, theories and their distractors
+
+## loose theories
+## problematic auxiliaries
+## ceteris paribus
+## what does a test show?
+
+## things we can watch out for:
+
+## Haeffel --- why always being right is not helpful
+## Scheel --- not even wrong 
+## Lundberg --- what even are we testing
+
+## various: not clear by what we say what we are doing or testing
+## Haeffel, Scheel, Lundberg: weak links between theory and test
+## Peterson baby factory: unreported but important information
+
+
+## probabilistic objects of study
+## sampling error
+## power, representativeness
+
+## validity --- borsboom --- is the thing present, do our measures reflect it?
+## measurement error
+## fragmentation, instruments are like toothbrushes
+## measurement schmeasurement
+
+## sampling error and power
+## things vary, people vary
+
+## this is why we need statistics but we need to think about how scientific enquiry evolves
+
+## require awareness: the difference between theory and hypothesis
+## need to be specific, concrete, in predictions
+## NHST, false positives, false negatives
+
+## the crud factor
+## nuisance variables, lots of variables
+
+## ethical and other reasons --- why we cannot research everything we think of that’s interesting
+
+
+## science as a thing that is done by people
+## working with people you don’t know or like or respect
+## communities where critical perspectives and questions are enabled
+
+## science as a thing with a history
+## peer review: new, imperfect, maybe over
+## open science reform: evolving
+## peer review, pre- and post-publication critiques
+
+## money fame and power: power, effort, prestige, productivity
+## fads, fashion, and funding
+
+## biases and inequities: language, race, geography and gender
+## homophily, diversity as a good thing
+
+## theories just fade away 
+## fads and trends
+## science is a social activity and suffers from inequities and biases
+
+## bad science, what makes science bad, is science self-correcting
+## bad science, what makes science bad, is science self-correcting
+effort, power, homophily, interdisciplinarity, how research evolves
+
+## bad science, what makes science bad, is science self-correcting
+MAHA and progressive agenda
+## bad science, what makes science bad, is science self-correcting
+data and fields of study going dark
+## bad science, what makes science bad, is science self-correcting
+AI
 
 ## References
 
