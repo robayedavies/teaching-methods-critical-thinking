@@ -1,0 +1,17 @@
+---
+title: "Being a scientist, doing a science, responding to science"
+author: "Rob Davies"
+format:
+  revealjs:
+    incremental: true 
+    embed-resources: false
+bibliography: references.bib
+csl: psychological-bulletin.csl
+---
+
+## Introduction
+
+## References
+
+::: {#refs}
+:::
