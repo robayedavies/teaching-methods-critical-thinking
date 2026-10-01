@@ -1,0 +1,592 @@
+---
+format:
+  pdf:
+    documentclass: article
+    geometry:
+      - margin=1in
+execute:
+  warning: false
+  message: false
+  echo: false
+---
+
+<!--
+Standalone single-figure extraction from comprehension-report-draft-structure-nhb.qmd.
+Contains only the preparatory chunks + final figure chunk for this one
+fig-composite-* label. The `format`/`execute` YAML keys above are copied
+verbatim from the parent report so this figure renders identically here
+and there. After editing, copy the edited chunk(s) back into the parent
+.qmd by chunk label -- do not rename any chunk label.
+-->
+
+```{r}
+#| label: trial-schematic-get-libraries
+#| include: false
+
+library(brms)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(readr)
+library(tibble)
+library(magick)
+library(grid)
+```
+
+```{r}
+#| label: trial-schematic-get-model
+#| include: false
+
+# -- response-accuracy core model (study/participant/text/question random intercepts)
+dev.all.studies.noratings.ptqs.normal.0.1.normal.0.1.lkj.2.study.ri <- readRDS(
+  "dev.all.studies.noratings.ptqs.normal.0.1.normal.0.1.lkj.2.study.ri.rds"
+)
+
+# -- core ratings model (study/participant/text random intercepts; no
+# question-level grouping factor exists for ratings)
+dev.ord.rating.all.studies.pts.normal.0.1.normal.0.1.lkj.2.study.ri.ad95 <- readRDS(
+  "dev.ord.rating.all.studies.pts.normal.0.1.normal.0.1.lkj.2.study.ri.ad95.rds"
+)
+```
+
+```{r}
+#| label: trial-schematic-get-raw-data
+#| include: false
+
+# -- only the columns needed for raw per-unit mean response accuracy/rating
+trial_schematic_data <- read_csv(
+  "2026-06-17-all-studies-prog-DECISION-noNAs-tidy.csv",
+  col_types = cols_only(
+    ResponseId = col_factor(),
+    study = col_factor(),
+    text.id = col_factor(),
+    text.question.id = col_factor(),
+    response = col_double(),
+    rating = col_double()
+  )
+)
+
+# -- collapse to one row per participant x text for the ratings outcome
+# (rating is recorded once per participant per text, not once per question)
+trial_schematic_ratings_data <- trial_schematic_data %>%
+  distinct(ResponseId, text.id, .keep_all = TRUE) %>%
+  filter(!is.na(rating))
+```
+
+```{tikz}
+%| label: fig-trial-schematic-diagrams
+%| include: false
+%| fig-align: center
+%| engine.opts:
+%|   extra.preamble:
+%|     - "\\usepackage[dvipsnames]{xcolor}"
+%|     - "\\usetikzlibrary{backgrounds}"
+%|     - "\\usepackage{amsmath,amssymb,bm}"
+%|     - "\\usepackage{graphicx}"
+%|     - "\\usetikzlibrary{calc}"
+% Layout parameters (matching study-participant-text-question-sampling-schematic.tex).
+\def\cellw{4.5}
+\def\cellh{3.5}
+\def\gx{15}
+\def\gy{0.5}
+\def\labely{4.2}
+\def\pcx{0}
+\def\pcy{2.0}
+\def\diagshift{0}
+
+% Macros ported from study-participant-text-question-sampling-schematic.tex
+% (defined there, not available by default in this standalone chunk).
+\newcommand{\studythumb}[3]{%
+\node[opacity=#3, anchor=center] at (#1,#2) {%
+\scalebox{0.22}{%
+\begin{tikzpicture}[font=\large\sffamily]
+  \node[draw=black!50, thick, minimum width=6cm, minimum height=4.5cm,
+        rounded corners=8, fill=white] (PR) at (0,0) {};
+  \node[draw=black!50, thick, minimum width=6cm, minimum height=4.5cm,
+        rounded corners=8, fill=white] (TR) at (8,0) {};
+  \node[draw=black!50, thick, minimum width=6cm, minimum height=4.5cm,
+        rounded corners=8, fill=white] (QR) at (4,-6) {};
+  \begin{scope}[shift={(PR.south west)}, xscale=4.75, yscale=4.75]
+    \foreach \x/\y in {-0.018/0.744, 0.181/0.652, 0.524/0.774, 0.642/0.605,
+                        -0.008/0.336, 0.388/0.418, 0.520/0.459, 0.585/0.270}
+      { \fill[YellowGreen!80!black!95, draw=black]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+    \foreach \x/\y in {0.047/0.580, 0.325/0.743, 0.146/0.475, 0.290/0.530,
+                        0.437/0.582, 0.341/0.297, 0.636/0.393, 0.146/0.339}
+      { \fill[CornflowerBlue!40, draw=black]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+  \end{scope}
+  \begin{scope}[shift={(TR.south west)}, xscale=4.75, yscale=4.75]
+    \foreach \x/\y in {1.290/0.728, 1.665/0.467, 1.773/0.257,
+                        1.214/0.320, 1.158/0.515}
+      { \fill[YellowGreen!80!black!95, draw=black]
+          (\x*1.3-1.35,\y*1.3-.2) circle (2pt); }
+    \foreach \x/\y in {1.484/0.795, 1.566/0.561, 1.265/0.595, 1.399/0.605,
+                        1.822/0.430, 1.572/0.684, 1.718/0.651, 1.822/0.743,
+                        1.590/0.366, 1.399/0.257, 1.318/0.430}
+      { \fill[CornflowerBlue!40, draw=black]
+          (\x*1.3-1.35,\y*1.3-.2) circle (2pt); }
+  \end{scope}
+  \begin{scope}[shift={(QR.south west)}, xscale=4.75, yscale=4.75]
+    \foreach \x/\y in {0.05/0.74, 0.20/0.65, 0.52/0.77,
+                        0.64/0.60, 0.10/0.34, 0.39/0.42}
+      { \fill[YellowGreen!80!black!95, draw=black]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+    \foreach \x/\y in {0.15/0.58, 0.33/0.74, 0.14/0.47, 0.29/0.53,
+                        0.44/0.58, 0.34/0.30, 0.63/0.39, 0.15/0.34}
+      { \fill[CornflowerBlue!40, draw=black]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+  \end{scope}
+\end{tikzpicture}%
+}};%
+}
+
+\begin{tikzpicture}[
+    font=\large\sffamily,
+    background rectangle/.style={fill=white}, show background rectangle
+    ]
+
+  % ===================================================
+  % Sampling diagrams (a.)/(b.): enlarged, side by side in two columns
+  % ===================================================
+  \begin{scope}[scale=1.3, transform shape]
+
+  % ===================================================
+  % COLUMN (a.): single study sampling diagram
+  % ===================================================
+
+  % (a.)/(b.) panel-label text has been moved out of this tikz picture
+  % entirely -- it is now produced by the same `make_row_title()` ggplot
+  % helper used for (c.)/(d.)/(e.), so all five composite labels share one
+  % rendering pipeline (font, size, weight, left-justification) instead of
+  % two independently-tuned ones (tikz raster vs. ggplot vector text).
+
+  % Rectangle labels use \normalsize — smaller than (b.) heading
+  \node[draw=black!40, thick, minimum width=6cm, minimum height=4.5cm,
+        rounded corners=10,
+        label={[label distance=1cm, font=\normalsize\sffamily\bfseries]%
+               above:\textbf{Sample from readers $i$}}]
+        (Pmain) at (\diagshift + 0, 0) {};
+  \node[draw=black!40, thick, minimum width=6cm, minimum height=4.5cm,
+        rounded corners=10,
+        label={[label distance=1cm, font=\normalsize\sffamily\bfseries]%
+               above:\textbf{Sample from texts $j$}}]
+        (Tmain) at (\diagshift + 8, 0) {};
+  \node[draw=black!40, thick, minimum width=6cm, minimum height=4.5cm,
+        rounded corners=10,
+        label={[label distance=1cm, font=\normalsize\sffamily\bfseries]%
+               below:\textbf{Sample from questions $k$}}]
+        (Qmain) at (\diagshift + 4, -6) {};
+
+  \begin{scope}[shift={(Pmain.south west)}, xscale=4.75, yscale=4.75]
+    \foreach \x/\y in {-0.018/0.744, 0.181/0.652, 0.524/0.774, 0.642/0.605,
+                        -0.008/0.336, 0.388/0.418, 0.520/0.459, 0.585/0.270}
+      { \fill[YellowGreen!80!black!95, draw=black, thick]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+    \foreach \x/\y in {0.047/0.580, 0.325/0.743, 0.146/0.475, 0.290/0.530,
+                        0.437/0.582, 0.341/0.297, 0.636/0.393, 0.146/0.339}
+      { \fill[CornflowerBlue!40, draw=black, thick]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+  \end{scope}
+
+  \begin{scope}[shift={(Tmain.south west)}, xscale=4.75, yscale=4.75]
+    \foreach \x/\y in {1.290/0.728, 1.665/0.467, 1.773/0.257,
+                        1.214/0.320, 1.158/0.515}
+      { \fill[YellowGreen!80!black!95, draw=black, thick]
+          (\x*1.3-1.35,\y*1.3-.2) circle (2pt); }
+    \foreach \x/\y in {1.484/0.795, 1.566/0.561, 1.265/0.595, 1.399/0.605,
+                        1.822/0.430, 1.572/0.684, 1.718/0.651, 1.822/0.743,
+                        1.590/0.366, 1.399/0.257, 1.318/0.430}
+      { \fill[CornflowerBlue!40, draw=black, thick]
+          (\x*1.3-1.35,\y*1.3-.2) circle (2pt); }
+  \end{scope}
+
+  \begin{scope}[shift={(Qmain.south west)}, xscale=4.75, yscale=4.75]
+    \foreach \x/\y in {0.05/0.74, 0.20/0.65, 0.52/0.77,
+                        0.64/0.60, 0.10/0.34, 0.39/0.42}
+      { \fill[YellowGreen!80!black!95, draw=black, thick]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+    \foreach \x/\y in {0.15/0.58, 0.33/0.74, 0.14/0.47, 0.29/0.53,
+                        0.44/0.58, 0.34/0.30, 0.63/0.39, 0.15/0.34}
+      { \fill[CornflowerBlue!40, draw=black, thick]
+          (\x*1.3+.25,\y*1.3-.2) circle (2pt); }
+  \end{scope}
+
+  \coordinate (dotj) at (\diagshift + 0.5, 1.4);
+  \fill[CornflowerBlue!40, draw=black, thick] (dotj) circle (3.5pt);
+  \node[above=3pt, font=\small\sffamily\bfseries] at (dotj) {$j$};
+
+  \coordinate (doti) at (\diagshift + 8.0, 1.4);
+  \fill[CornflowerBlue!40, draw=black, thick] (doti) circle (3.5pt);
+  \node[above=3pt, font=\small\sffamily\bfseries] at (doti) {$i$};
+
+  \coordinate (dotk) at (\diagshift + 4.0, -5.6);
+  \fill[CornflowerBlue!40, draw=black, thick] (dotk) circle (3.5pt);
+  \node[above=3pt, font=\small\sffamily\bfseries] at (dotk) {$k$};
+
+  \draw[thick,-latex] (dotj) -- (doti)
+      node[midway, above=25pt, font=\small\sffamily, align=center]
+      {Reader responds to text stimulus};
+  \draw[thick, dashed, -latex] (dotk) -- (dotj);
+  \draw[thick, dashed, -latex] (dotk) -- (doti);
+  \node[right=0.15cm, font=\small\sffamily, align=left]
+      at (\diagshift + 5.5, -3.1)
+      {Reader responds to\\[-2pt]question about text};
+
+  \draw[thick]
+      (\diagshift - 3.3,  2.25) -- (\diagshift - 3.7,  2.25)
+      -- (\diagshift - 3.7, -8.25) -- (\diagshift - 3.3, -8.25);
+  \node[left=3pt, align=right, font=\small\sffamily\bfseries]
+      at (\diagshift - 3.7, -3)
+      {\textbf{Joint}\\[-3pt]\textbf{sample}};
+
+  \node[anchor=west,
+        label={[font=\small\sffamily]right:Unit not sampled}]
+      at (\diagshift - 3.4, -10.0)
+      {\tikz\fill[YellowGreen!80!black!95, draw=black, thick]
+                  (0,0) circle (4pt);};
+  \node[anchor=west,
+        label={[font=\small\sffamily]right:Unit sampled}]
+      at (\diagshift - 3.4, -10.7)
+      {\tikz\fill[CornflowerBlue!40, draw=black, thick]
+                  (0,0) circle (4pt);};
+
+  % ===================================================
+  % COLUMN (b.): 2 x 3 thumbnail grid
+  % ===================================================
+
+  \studythumb{\gx         }{\gy            }{1.0}
+  \studythumb{\gx + \cellw}{\gy            }{1.0}
+  \studythumb{\gx         }{\gy - \cellh   }{1.0}
+  \studythumb{\gx + \cellw}{\gy - \cellh   }{1.0}
+  \studythumb{\gx         }{\gy - 2*\cellh }{1.0}
+  \studythumb{\gx + \cellw}{\gy - 2*\cellh }{0.20}
+
+  \node[align=center, font=\footnotesize\sffamily, text=black!50]
+      at (\gx + \cellw, \gy - 2*\cellh - 1.6)
+      {Not yet\\sampled};
+
+  \draw[thick]
+      (\gx - 0.5*\cellw - 0.1,  \gy + 1.6)
+      -- (\gx - 0.5*\cellw - 0.4, \gy + 1.6)
+      -- (\gx - 0.5*\cellw - 0.4, \gy - 2*\cellh - 1.6)
+      -- (\gx - 0.5*\cellw - 0.1, \gy - 2*\cellh - 1.6);
+  \node[left=3pt, align=right, font=\small\sffamily\bfseries]
+      at (\gx - 0.5*\cellw - 0.4, \gy - \cellh)
+      {\textbf{Sample}\\[-3pt]\textbf{from}\\[-3pt]\textbf{studies}};
+
+  \end{scope}
+
+\end{tikzpicture}
+```
+
+```{tikz}
+%| label: fig-trial-model-equation-composite
+%| include: false
+%| fig-align: center
+%| engine.opts:
+%|   extra.preamble:
+%|     - "\\usepackage[dvipsnames]{xcolor}"
+%|     - "\\usetikzlibrary{backgrounds}"
+%|     - "\\usepackage{amsmath,amssymb,bm}"
+%|     - "\\usepackage{graphicx}"
+%|     - "\\usetikzlibrary{calc}"
+
+\begin{tikzpicture}[
+    font=\Large\sffamily,
+    background rectangle/.style={fill=white}, show background rectangle
+    ]
+
+  % (c.) panel-label text has likewise been moved out of this tikz
+  % picture -- see the note in `fig-trial-schematic-diagrams` above.
+
+  \node[anchor=north, text width=30cm] at (0, -1.4) {%
+    \begin{minipage}{30cm}
+    \raggedright
+    \setlength{\abovedisplayskip}{6pt}
+    \setlength{\belowdisplayskip}{6pt}
+    \setlength{\abovedisplayshortskip}{0pt}
+    \setlength{\belowdisplayshortskip}{0pt}
+
+    % Likelihood and linear predictor, combined on one line
+    {\huge
+    \begin{flalign*}
+      &\mathrm{response}_i \sim \mathrm{Bernoulli}(p_i), \quad
+         \operatorname{logit}(p_i)
+         = \underbrace{\alpha + \bm{\beta}^\top\mathbf{x}_i}_{\text{fixed effects}}
+         + \underbrace{u_{s[i]}}_{\substack{\text{study}\\\text{intercept}}}
+         + \underbrace{\mathbf{v}_{j[i]}^\top\mathbf{t}_i}_{\substack{\text{participant intercept}\\\text{\&\ slopes}}}
+         + \underbrace{\mathbf{w}_{t[i]}^\top\mathbf{p}_i}_{\substack{\text{text intercept}\\\text{\&\ slopes}}}
+         + \underbrace{\mathbf{z}_{q[i]}^\top\mathbf{p}_i}_{\substack{\text{question intercept}\\\text{\&\ slopes}}}
+      &
+    \end{flalign*}
+    }
+    \vspace{8pt}
+    {\LARGE
+      $\mathbf{t}_i$: text features \& intercept (dim~6);\enspace
+      $\mathbf{p}_i$: participant features, interactions \& intercept (dim~7)}
+    \end{minipage}%
+  };
+
+\end{tikzpicture}
+```
+
+```{r}
+#| label: trial-schematic-overlay-helpers
+#| include: false
+
+# -- raw per-unit means as a bottom grey layer, model-estimated random
+# intercepts (already converted to the outcome's natural scale by the
+# caller) as an upper coloured layer. `panel_title = NULL` omits the
+# per-panel title entirely (used by the composite figure below, which
+# labels each panel via its x-axis instead and gives the whole grid one
+# shared title).
+make_overlay_hist <- function(raw_df, model_df, fill_values, panel_title = NULL,
+                               xlab, binwidth, xlim_range = NULL, xbreaks = NULL,
+                               xlabels = NULL) {
+  p <- ggplot() +
+    geom_histogram(data = raw_df, aes(x = mean, fill = "Raw mean"),
+                    binwidth = binwidth, alpha = 0.6, colour = "white", linewidth = 0.1) +
+    geom_histogram(data = model_df, aes(x = mean, fill = "Model estimate"),
+                    binwidth = binwidth, alpha = 0.6, colour = "white", linewidth = 0.1) +
+    scale_fill_manual(values = fill_values, name = NULL) +
+    labs(x = xlab, y = "Count") +
+    theme_bw() +
+    theme(plot.title = element_text(size = 9))
+  if (!is.null(panel_title) && nzchar(panel_title)) {
+    p <- p + labs(title = panel_title)
+  }
+  # -- always show the outcome's full natural range on the x-axis (0-1 for
+  # accuracy, 1-9 for ratings), not just the range spanned by the data.
+  # NOTE: `labels = NULL` in scale_x_continuous() means "no tick labels at
+  # all" (not "use default labels") -- only pass `labels` when the caller
+  # actually supplied custom ones, otherwise ggplot's default (derived
+  # from `breaks`) is used.
+  if (!is.null(xlim_range) || !is.null(xbreaks)) {
+    if (!is.null(xlabels)) {
+      p <- p + scale_x_continuous(limits = xlim_range, breaks = xbreaks, labels = xlabels)
+    } else {
+      p <- p + scale_x_continuous(limits = xlim_range, breaks = xbreaks)
+    }
+  }
+  p
+}
+```
+
+```{r}
+#| label: trial-schematic-step1-raw-means-accuracy
+#| include: false
+
+raw_study       <- trial_schematic_data %>% group_by(study)           %>% summarize(mean = mean(response), .groups = "drop")
+raw_participant <- trial_schematic_data %>% group_by(ResponseId)       %>% summarize(mean = mean(response), .groups = "drop")
+raw_text        <- trial_schematic_data %>% group_by(text.id)          %>% summarize(mean = mean(response), .groups = "drop")
+raw_question    <- trial_schematic_data %>% group_by(text.question.id) %>% summarize(mean = mean(response), .groups = "drop")
+```
+
+```{r}
+#| label: trial-schematic-step2-model-intercepts-accuracy
+#| include: false
+
+re_acc <- brms::ranef(
+  dev.all.studies.noratings.ptqs.normal.0.1.normal.0.1.lkj.2.study.ri,
+  summary = TRUE
+)
+fixef_intercept_acc <- brms::fixef(
+  dev.all.studies.noratings.ptqs.normal.0.1.normal.0.1.lkj.2.study.ri
+)["Intercept", "Estimate"]
+
+model_study       <- tibble(mean = plogis(fixef_intercept_acc + re_acc$study[, "Estimate", "Intercept"]))
+model_participant <- tibble(mean = plogis(fixef_intercept_acc + re_acc$ResponseId[, "Estimate", "Intercept"]))
+model_text        <- tibble(mean = plogis(fixef_intercept_acc + re_acc$text.id[, "Estimate", "Intercept"]))
+model_question    <- tibble(mean = plogis(fixef_intercept_acc + re_acc$text.question.id[, "Estimate", "Intercept"]))
+
+rm(re_acc); invisible(gc())
+
+# -- the full accuracy fit is not needed again after this chunk; discard it
+# now (per this project's convention of not holding multiple ~800MB brmsfit
+# objects in memory simultaneously across a long combined render).
+rm(dev.all.studies.noratings.ptqs.normal.0.1.normal.0.1.lkj.2.study.ri); invisible(gc())
+
+fill_values_acc <- c("Raw mean" = "grey50", "Model estimate" = "limegreen")
+```
+
+```{r}
+#| label: trial-schematic-step1-raw-means-ratings
+#| include: false
+
+raw_study_rat       <- trial_schematic_ratings_data %>% group_by(study)      %>% summarize(mean = mean(rating), .groups = "drop")
+raw_participant_rat <- trial_schematic_ratings_data %>% group_by(ResponseId) %>% summarize(mean = mean(rating), .groups = "drop")
+raw_text_rat        <- trial_schematic_ratings_data %>% group_by(text.id)    %>% summarize(mean = mean(rating), .groups = "drop")
+```
+
+```{r}
+#| label: trial-schematic-step2-model-intercepts-ratings
+#| include: false
+
+re_rat <- brms::ranef(
+  dev.ord.rating.all.studies.pts.normal.0.1.normal.0.1.lkj.2.study.ri.ad95,
+  summary = TRUE
+)
+fixef_rat <- brms::fixef(dev.ord.rating.all.studies.pts.normal.0.1.normal.0.1.lkj.2.study.ri.ad95)
+thresholds_rat <- fixef_rat[grepl("^Intercept\\[", rownames(fixef_rat)), "Estimate"]
+
+expected_rating <- function(u, thresholds) {
+  p_le <- outer(thresholds, u, function(th, uu) plogis(th - uu))
+  1 + colSums(1 - p_le)
+}
+
+model_study_rat       <- tibble(mean = expected_rating(re_rat$study[, "Estimate", "Intercept"],      thresholds_rat))
+model_participant_rat <- tibble(mean = expected_rating(re_rat$ResponseId[, "Estimate", "Intercept"], thresholds_rat))
+model_text_rat        <- tibble(mean = expected_rating(re_rat$text.id[, "Estimate", "Intercept"],    thresholds_rat))
+
+rm(re_rat); invisible(gc())
+
+# -- likewise discard the full ratings fit now that its ranef()/fixef()
+# summaries have been extracted.
+rm(dev.ord.rating.all.studies.pts.normal.0.1.normal.0.1.lkj.2.study.ri.ad95); invisible(gc())
+
+fill_values_rat <- c("Raw mean" = "grey50", "Model estimate" = "skyblue")
+rat_breaks <- 1:9
+```
+
+```{r}
+#| label: fig-composite-design-schema
+#| fig-cap: "**The implications when we test the response of participants to questions about texts.**"
+#| fig-width: 8.5
+#| fig-height: 12
+#| fig-pos: 'H'
+
+library(magick)
+library(grid)
+
+qmd_base <- tryCatch(tools::file_path_sans_ext(knitr::current_input()), error = function(e) NA)
+if (is.null(qmd_base) || is.na(qmd_base)) qmd_base <- "trial-design-schematic-figure-composite-only"
+files_dir <- paste0(qmd_base, "_files")
+
+find_chunk_image <- function(label_pattern) {
+  candidates <- list.files(files_dir, pattern = label_pattern, recursive = TRUE, full.names = TRUE)
+  # -- prefer the vector PDF source over a PNG fallback, if both exist
+  candidates[order(!grepl("\\.pdf$", candidates))][1]
+}
+
+schematic_path <- find_chunk_image("^fig-trial-schematic-diagrams-1\\.(pdf|png)$")
+equation_path  <- find_chunk_image("^fig-trial-model-equation-composite-1\\.(pdf|png)$")
+
+read_as_grob <- function(path, density = 300) {
+  img <- if (grepl("\\.pdf$", path)) {
+    magick::image_read_pdf(path, density = density)
+  } else {
+    magick::image_read(path)
+  }
+  # -- trim surrounding whitespace so each image's leftmost *content*
+  # (here, always the panel label -- "(a.)"/"(c.)" sit at the leftmost
+  # x-coordinate in their respective tikz pictures) lands at column 0 of
+  # the raster. Since rasterGrob() below stretches to fill its patchwork
+  # cell exactly, this makes the label's left edge coincide with the
+  # panel's left edge, matching the (d.)/(e.) ggplot titles' left-aligned
+  # text (see make_row_title()) instead of drifting per-image depending
+  # on each tikz picture's own incidental bounding-box padding.
+  img <- magick::image_trim(img)
+  rasterGrob(as.raster(img), interpolate = TRUE)
+}
+
+schematic_grob <- read_as_grob(schematic_path)
+equation_grob  <- read_as_grob(equation_path)
+
+# -- a small text-only "panel" used as a shared title above each grid, in
+# place of per-panel titles. An explicit finite 0-1 coordinate system
+# (rather than x = -Inf on a scale-less empty ggplot, which did not
+# reliably resolve) with hjust = 0 at x = 0 left-justifies the text at the
+# left edge of this panel -- which spans the full composite width, same as
+# the schematic/equation panels above.
+make_row_title <- function(label) {
+  ggplot() +
+    # -- `expand = c(0, 0)` removes ggplot's default 5% axis expansion,
+    # which otherwise inset x = 0 (and therefore the hjust = 0 label
+    # below) away from this panel's true left edge -- that inset, plus
+    # patchwork's default cross-panel axis alignment (fixed below at the
+    # call site via `wrap_elements(full = ...)`), was the actual cause of
+    # (d.)/(e.) appearing shifted right of the trimmed, left-anchored
+    # (a.)/(c.) tikz labels, not a font/margin issue
+    scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+    # -- size chosen (and left margin zeroed) to match the trimmed,
+    # left-anchored (a.)/(c.) tikz labels above as closely as a raster
+    # image and vector ggplot text can be matched; confirmed by visual
+    # comparison of the rendered composite, not derived analytically
+    annotate("text", x = 0, y = 0.5, label = label, fontface = "bold", size = 5.2, hjust = 0) +
+    theme_void() +
+    theme(plot.margin = margin(t = 2, b = 2, l = 0, r = 2)) +
+    coord_cartesian(clip = "off")
+}
+
+# -- x-axis label is now the grouping-factor name (panel_title = NULL
+# suppresses the per-panel title used in the walkthrough); accuracy
+# breaks are widened to 0.5 so labels show one decimal place (0.0/0.5/1.0)
+acc_breaks_composite <- c(0, 0.5, 1)
+
+p.acc.study.grid       <- make_overlay_hist(raw_study,       model_study,       fill_values_acc, xlab = "Study",       binwidth = 0.05, xlim_range = c(0, 1), xbreaks = acc_breaks_composite)
+p.acc.participant.grid <- make_overlay_hist(raw_participant, model_participant, fill_values_acc, xlab = "Participant", binwidth = 0.05, xlim_range = c(0, 1), xbreaks = acc_breaks_composite)
+p.acc.text.grid        <- make_overlay_hist(raw_text,        model_text,        fill_values_acc, xlab = "Text",        binwidth = 0.05, xlim_range = c(0, 1), xbreaks = acc_breaks_composite)
+p.acc.question.grid    <- make_overlay_hist(raw_question,    model_question,    fill_values_acc, xlab = "Question",    binwidth = 0.05, xlim_range = c(0, 1), xbreaks = acc_breaks_composite)
+
+p.rat.study.grid       <- make_overlay_hist(raw_study_rat,       model_study_rat,       fill_values_rat, xlab = "Study",       binwidth = 0.4, xlim_range = c(1, 9), xbreaks = rat_breaks)
+p.rat.participant.grid <- make_overlay_hist(raw_participant_rat, model_participant_rat, fill_values_rat, xlab = "Participant", binwidth = 0.4, xlim_range = c(1, 9), xbreaks = rat_breaks)
+p.rat.text.grid        <- make_overlay_hist(raw_text_rat,        model_text_rat,        fill_values_rat, xlab = "Text",        binwidth = 0.4, xlim_range = c(1, 9), xbreaks = rat_breaks)
+
+# -- manual compact legend (not extracted from a real scale, since the
+# accuracy and ratings panels use two different fill scales): three
+# colour swatches stacked vertically (this cell is narrow but tall), each
+# with its label printed above, not beside, the swatch
+legend_key <- tibble(
+  y = 3:1,
+  colour = c("limegreen", "skyblue", "grey50"),
+  label = c("Model estimate (accuracy)", "Model estimate (ratings)", "Raw mean")
+)
+p_legend <- ggplot(legend_key, aes(x = 0, y = y)) +
+  geom_tile(aes(fill = colour), width = 0.7, height = 0.5, colour = "white") +
+  geom_text(aes(label = label, y = y + 0.42), size = 2.6, lineheight = 0.85) +
+  scale_fill_identity() +
+  xlim(-1.6, 1.6) +
+  ylim(0.3, 3.9) +
+  theme_void()
+
+# -- suppress each panel's own (ggplot-generated) legend since the manual
+# legend above replaces it
+row_acc <- (p.acc.study.grid + p.acc.participant.grid + p.acc.text.grid + p.acc.question.grid) +
+  plot_layout(nrow = 1) &
+  theme(legend.position = "none")
+row_rat <- (p.rat.study.grid + p.rat.participant.grid + p.rat.text.grid + p_legend) +
+  plot_layout(nrow = 1) &
+  theme(legend.position = "none")
+
+# -- all five composite labels are now produced by the identical
+# make_row_title() helper (see its definition above), rather than three
+# of them (a./b./c.) being baked into tikz rasters at a separately-tuned
+# font size. (a.)/(b.) sit side by side (widths approximate the schematic
+# image's own left/right column proportions, confirmed by eye against the
+# rendered composite) rather than each spanning the full width like
+# (c.)/(d.)/(e.).
+label_ab <- (make_row_title("(a.) Single study") + make_row_title("(b.) A sample of studies")) +
+  plot_layout(widths = c(0.65, 0.35))
+
+# -- every label -- including the two-part (a.)/(b.) row above -- is
+# wrapped in `wrap_elements(full = ...)`, exactly like the schematic/
+# equation raster panels. Patchwork otherwise aligns every plain ggplot
+# panel's *plot area* (not just its outer cell) across the whole
+# composite so axes line up column-wise -- which shifted bare row-title
+# panels right to match row_acc/row_rat's y-axis label width, undoing the
+# left-justification set inside make_row_title(). `full = ...` opts a
+# panel out of that alignment and simply fills its entire cell
+# edge-to-edge, matching how the schematic/equation rasters are placed.
+wrap_elements(full = label_ab) /
+  wrap_elements(full = schematic_grob) /
+  wrap_elements(full = make_row_title("(c.) Likelihood")) /
+  wrap_elements(full = equation_grob) /
+  wrap_elements(full = make_row_title("(d.) Response accuracy")) /
+  row_acc /
+  wrap_elements(full = make_row_title("(e.) Rated understanding")) /
+  row_rat +
+  plot_layout(heights = c(0.15, 3.3, 0.15, 1.15, 0.15, 1, 0.15, 1))
+```
+
