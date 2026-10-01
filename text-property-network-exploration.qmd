@@ -1,0 +1,237 @@
+---
+title: "Text-property network exploration: candidate predictors beyond the core 5"
+format:
+  html:
+    toc: true
+    code-fold: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+## Purpose
+
+The focal accuracy and ratings models each use 5 hand-picked Coh-Metrix /
+readability text-property predictors (`BNC_Written_Freq_AW`, `PCREFp`,
+`PCDCp`, `DRPVAL`, `RDFRE`) out of 113 available (columns
+`BNC_Written_Freq_AW` through `SMOG` in the main tidy dataset). This
+document explores how those 113 candidates relate to each other and to the
+existing 5, in order to shortlist a manageable candidate set for a
+subsequent `projpred` predictive-utility screen.
+
+```{r}
+#| label: setup
+library(tidyverse)
+library(tidygraph)
+library(ggraph)
+library(igraph)
+library(rcartocolor)
+
+core_vars <- c("BNC_Written_Freq_AW", "PCREFp", "PCDCp", "DRPVAL", "RDFRE")
+```
+
+## Data preparation
+
+One row per `text.id` (136 texts), keeping the 113 candidate columns.
+
+```{r}
+#| label: load-data
+all.studies <- read_csv("2026-06-17-all-studies-prog-DECISION-noNAs-tidy.csv",
+                        col_types = cols(
+                          ResponseId = col_factor(), GENDER = col_factor(),
+                          EDUCATION = col_factor(), ETHNICITY = col_factor(),
+                          OTHER.LANGUAGE = col_factor(), text.id = col_factor(),
+                          text.question.id = col_factor(), study = col_factor()
+                        ))
+
+candidate_cols <- names(all.studies)[
+  which(names(all.studies) == "BNC_Written_Freq_AW"):which(names(all.studies) == "SMOG")
+]
+
+texts <- all.studies |>
+  distinct(text.id, .keep_all = TRUE) |>
+  select(text.id, study, all_of(candidate_cols))
+
+dim(texts)
+```
+
+## Data audit
+
+No missing values and no constant/near-constant columns were found among
+the 113 candidates. A number of columns contain legitimate zeros (e.g.
+pronoun/connective/negation counts for texts that simply lack that
+construction) rather than missing-data artifacts:
+
+```{r}
+#| label: audit
+audit <- texts |>
+  select(all_of(candidate_cols)) |>
+  summarise(across(everything(), list(
+    n_na = ~sum(is.na(.)),
+    n_zero = ~sum(. == 0, na.rm = TRUE),
+    n_distinct = ~n_distinct(.)
+  ))) |>
+  pivot_longer(everything(), names_to = c("var", ".value"),
+               names_pattern = "(.*)_(n_na|n_zero|n_distinct)$")
+
+audit |> filter(n_na > 0)   # none
+audit |> filter(n_zero > 5) |> arrange(desc(n_zero))
+```
+
+::: {.callout-note}
+13 variables have more than 5 zero values across the 136 texts (up to 132
+for `WRDPRP3s`), but every one is a count/incidence-type variable (pronoun
+types, connective types, negation, re-reading value) where zero is a valid
+observed value, not evidence of a missing/unextracted feature. `DRPVAL`
+(already a core predictor) has 13 legitimate zeros. No column was dropped
+on data-quality grounds.
+:::
+
+## Correlation structure and network graph
+
+Z-scored, pairwise-complete correlations across all 113 candidates, with
+edges drawn for `|r| >= 0.3` and communities detected via the Louvain
+algorithm (weighted by `|r|`), following the same approach as the example
+workflow supplied for this project.
+
+```{r}
+#| label: cor-network
+#| fig-width: 9
+#| fig-height: 7
+text.data <- texts |>
+  select(-study) |>
+  mutate(across(where(is.numeric), ~as.numeric(scale(.)))) |>
+  column_to_rownames(var = "text.id")
+
+cor_mat <- cor(text.data, use = "pairwise.complete.obs")
+
+cor_df <- as.data.frame(cor_mat) |>
+  rownames_to_column("var1") |>
+  pivot_longer(-var1, names_to = "var2", values_to = "correlation") |>
+  filter(var1 != var2, var1 < var2)
+
+threshold <- 0.3
+edges <- cor_df |>
+  filter(abs(correlation) >= threshold) |>
+  rename(from = var1, to = var2, weight = correlation)
+
+nodes <- data.frame(name = colnames(cor_mat))
+
+graph <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE) |>
+  activate(edges) |>
+  mutate(abs_weight = abs(weight)) |>
+  activate(nodes) |>
+  mutate(
+    community = as.factor(group_louvain(weights = abs_weight)),
+    degree    = centrality_degree(),
+    highlight = name %in% core_vars
+  )
+
+set.seed(3927)
+graph_filtered <- graph |> activate(nodes) |> filter(centrality_degree() > 0)
+carto_div <- carto_pal(7, "TealRose")
+
+ggraph(graph_filtered, layout = "fr", weights = abs_weight) +
+  geom_edge_link(aes(color = weight, width = abs(weight)), alpha = 0.5) +
+  geom_node_point(aes(color = community, size = degree), alpha = 0.85) +
+  geom_node_point(data = ~filter(., highlight), color = "black", size = 1,
+                   shape = 21, stroke = 1.2, fill = NA) +
+  geom_node_text(aes(label = ifelse(highlight, name, "")), repel = TRUE,
+                  size = 3.5, color = "black", fontface = "bold", max.overlaps = 30) +
+  scale_edge_color_gradient2(low = carto_div[1], mid = carto_div[4], high = carto_div[7],
+                              midpoint = 0, name = "Correlation") +
+  scale_edge_width(range = c(0.1, 1.3), guide = "none") +
+  scale_size(range = c(1.5, 7), guide = "none") +
+  scale_color_carto_d(palette = "Bold", name = "Cluster") +
+  theme_graph(base_family = "sans") +
+  theme(legend.position = "right")
+```
+
+### Cluster membership
+
+```{r}
+#| label: cluster-membership
+membership <- as.data.frame(graph, active = "nodes") |>
+  arrange(community, desc(degree)) |>
+  select(name, community, degree, highlight)
+
+membership |>
+  group_by(community) |>
+  summarise(n = n(), members = paste(name, collapse = ", "), .groups = "drop")
+```
+
+Five communities emerge. **Three of the five existing core predictors
+(`PCDCp`, `BNC_Written_Freq_AW`, `DRPVAL`) fall in the same cluster
+(4)**, while `PCREFp` anchors cluster 3 and `RDFRE` anchors cluster 1.
+**Clusters 1 (word length/frequency/readability, 38 vars) and 2
+(syntactic complexity/causal-verb cohesion, 28 vars) have no core
+predictor in them at all** — these are the most under-represented regions
+of the construct space in the current models. Cluster 5 is a single
+isolated variable, `WRDPRP3s` (third-person-singular pronoun incidence),
+uncorrelated with anything else above the 0.3 threshold.
+
+### Near-duplicate pairs
+
+```{r}
+#| label: near-dupes
+cor_df |> filter(abs(correlation) > 0.9) |> arrange(desc(abs(correlation)))
+```
+
+These pairs (mostly the Coh-Metrix z/percentile variants of the same
+composite index, e.g. `PCTEMPp`/`PCTEMPz`, plus the readability-formula
+family `Flesch`/`FOG`/`SMOG`/`Flesch.Kincaid`, and `DESWLsy`/`RDFRE`)
+carry essentially the same information and were treated as a single
+candidate each below.
+
+## Candidate shortlist for `projpred`
+
+Selection logic: pick 1-4 representative variables per cluster,
+prioritizing (a) clusters under-represented among the existing 5 core
+predictors, (b) variables that are conceptually distinct constructs
+rather than raw z/percentile duplicates of one another, and (c) variables
+not already highly correlated (`|r| > 0.7`) with an existing core
+predictor. `CRFAOa` (r = 0.85 with `PCREFp`) and `CNCLogic`/`CNCCaus`
+(r = 0.76/0.69 with `PCDCp`) were considered but dropped as too redundant
+with variables already in the core model.
+
+```{r}
+#| label: shortlist
+candidate_pool <- c("PCNARp", "WRDAOAc", "WRDHYPnv", "WRDFRQa",
+                     "PCSYNp", "SMCAUSlsa", "SMCAUSwn", "SYNLE",
+                     "DESSL", "PCVERBp",
+                     "LDMTLD", "LSASSp",
+                     "WRDPRP3s")
+
+round(cor_mat[candidate_pool, core_vars], 2)
+```
+
+| Variable | Cluster | Construct | Rationale |
+|---|---|---|---|
+| `PCNARp` | 1 | Narrativity (Coh-Metrix PC) | Distinct genre-level construct; moderate link to `RDFRE` (r=0.65) but not redundant |
+| `WRDAOAc` | 1 | Age-of-acquisition | Psycholinguistic construct absent from core model |
+| `WRDHYPnv` | 1 | Hypernymy (noun+verb) | Conceptual specificity/abstractness, distinct from readability |
+| `WRDFRQa` | 1 | Coh-Metrix word frequency (all words) | Frequency measure independent of the BNC corpus already used |
+| `PCSYNp` | 2 | Syntactic simplicity (Coh-Metrix PC) | Cluster 2 has zero core-predictor representation |
+| `SMCAUSlsa` | 2 | Causal cohesion (LSA-based) | More specific than `PCDCp`'s composite "deep cohesion" |
+| `SMCAUSwn` | 2 | Causal cohesion (WordNet-based) | Alternate causal-cohesion operationalization |
+| `SYNLE` | 2 | Left-embeddedness (syntactic complexity) | Structural complexity, distinct from word-level measures |
+| `DESSL` | 2 | Sentence length | Basic, widely-used descriptive metric |
+| `PCVERBp` | 2 | Verb cohesion (Coh-Metrix PC) | Distinct cohesion type from referential/deep cohesion |
+| `LDMTLD` | 3 | Lexical diversity (MTLD) | Distinct from `PCREFp`'s referential-overlap definition of cohesion |
+| `LSASSp` | 3 | LSA sentence-to-sentence overlap | Local (adjacent-sentence) semantic similarity vs. `PCREFp`'s paragraph-level composite |
+| `WRDPRP3s` | 5 (isolated) | 3rd-person-singular pronoun incidence | Uncorrelated with everything else at `|r|>=0.3`; included as an exploratory wildcard |
+
+This yields **13 candidates**, weighted toward clusters 1-2 (the two
+regions with no existing representation) and lighter on clusters 3-4
+(already anchored by `PCREFp` and three of the five core predictors,
+respectively).
+
+::: {.callout-important}
+**Checkpoint**: this shortlist (plus the existing 5 core predictors, all
+included together in the `projpred` search rather than forced in) is
+proposed as the fixed-effects candidate pool for the next step (fitting a
+`projpred` reference model). Confirm before proceeding, since the
+reference-model fit is the first computationally expensive step in this
+pipeline.
+:::
