@@ -1,0 +1,433 @@
+---
+title: "`error-rates-process-control.R`: false positives and false negatives as process-control error rates"
+subtitle: "Walkthrough: how the script works, and how to use it in Quarto"
+format:
+  html:
+    code-fold: false
+    toc: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+## Aims
+
+`error-rates-process-control.R` reframes false-positive and false-negative
+rates — concepts usually introduced as abstract properties of a hypothesis
+test — as **properties of a decision procedure applied over and over**, in
+the sense Neyman and Pearson built their theory of hypothesis testing around
+[@neyman1933]. It does this in two steps, deliberately concrete before
+abstract:
+
+- **Part A** starts from something that needs no statistical machinery at
+  all: ART3, the author-recognition test from `psych-battery-dgp.R`'s
+  battery [@vermeiren2023], already produces real false positives (saying
+  "yes" to a name that isn't an author) and real false negatives (saying
+  "no" to a name that is) for every simulated participant. This script
+  turns that into a **decision rule** — "classify someone as a frequent
+  reader if they recognize at least `k` of the 60 authors" — and asks the
+  question a rule like that actually needs answering: not "was this one
+  classification right?", but "if this exact rule were applied over and
+  over, how often would it be wrong, and in which direction?"
+- **Part B** points out that a significance test at a fixed alpha is
+  exactly this kind of rule — "reject H0 if p < alpha" — and reuses
+  `psych-battery-dgp.R`'s sweep engine to show power, the empirical Type I
+  rate, sign consistency (Type S), and CI coverage behaving exactly like
+  ART3's rule's error rates did: stable long-run properties of a fixed
+  procedure, recoverable by repetition, not properties of any one study's
+  result. A fourth property gets its own figure: the Type M "exaggeration
+  ratio" [@gelman2014] — not whether the procedure's *decision* is right,
+  but how distorted the *number* it reports tends to be, conditional on
+  having rejected.
+
+@perezgonzalez2015 is a useful accessible companion here: it lays out, side
+by side, how Fisher's evidential reading of a single p-value differs from
+Neyman and Pearson's decision-procedure reading — and how the hybrid most
+textbooks actually teach quietly borrows language from both without always
+saying so.
+
+After working through it, you should be able to:
+
+- explain, using ART3's own classification rule as a worked example, why a
+  false-positive/false-negative rate is a property of a *rule*, estimable
+  only by repetition, not a property of any single person's test result;
+- generate a reliability-by-sample-size or a true-correlation-by-sample-size
+  error-rate heatmap for a battery pair of your choosing, and read off
+  where a fixed testing procedure is well- vs. poorly-behaved;
+- explain why a significance filter inflates reported effect sizes at low
+  power, and why that inflation is a property of *selecting on
+  significance*, not a flaw in any individual study;
+- state, in your own words, the difference between Neyman and Pearson's
+  long-run error-rate framing of a significance test and Fisher's
+  evidential reading of a p-value.
+
+## Prerequisites / assumptions
+
+- **Packages**: `ggplot2` only.
+- **Sourcing**: `psych-battery-dgp.R` must be sourced first — this script
+  uses `default_test_specs()`, `default_reliability_vec()`,
+  `default_r_obs_matrix()`, `get_calibration()`, `simulate_battery()`,
+  `simulate_pair()`, `fit_focal_cor()`, `diagnose_cor_result()`,
+  `disattenuate()`, `run_sweep()`, `summarize_sweep()`,
+  `plot_metrics_vs_x()`, and `plot_power_heatmap()` directly.
+- **Reader background**: the measurement-error/sampling-error distinction
+  from `sampling-measurement-error-walkthrough.qmd` and the NHST/power
+  framing from `nhst-power-walkthrough.qmd` are both drawn on directly here
+  and are worth reading first if unfamiliar; some exposure to the terms
+  "sensitivity"/"specificity" or "true positive rate"/"false positive rate"
+  helps for Part A but is defined as it comes up.
+
+```{r}
+#| label: source-script
+source("psych-battery-dgp.R")
+source("error-rates-process-control.R")
+```
+
+## How it works: the process
+
+```{mermaid}
+flowchart LR
+    A["ART3 item-level responses\nsimulate_art3_battery()"] --> B["evaluate_art3_rule()\none application of a\n'>= k authors' rule"]
+    B --> C["sweep_art3_rule()\nrepeat over k x reps,\na fresh sample each time"]
+    C --> D["plot_art3_roc()\ncloud = single applications,\nred line = the rule's long-run rates"]
+    E["psych-battery-dgp.R\nrun_sweep() / run_reliability_sweep()"] --> F["summarize_sweep()\npower/Type I, sign consistency,\ntype_m_ratio, CI coverage, per grid cell"]
+    F --> G["plot_reliability_heatmap() /\nplot_true_corr_heatmap() /\nplot_process_control_overview()"]
+    F --> H["plot_type_m_curve()\nexaggeration ratio,\nits own (non 0-1) y-axis"]
+```
+
+The two halves share a structure even though they look different: both
+repeat a fixed procedure many times (Part A: classify `n` people, `reps`
+times, at each threshold `k`; Part B: run a significance test on `n`
+participants, `reps` times, at each grid cell) and summarize what fraction
+of those repetitions landed in each outcome category. Nothing in Part B is
+new simulation machinery — it is entirely orchestration over
+`psych-battery-dgp.R`'s existing `run_sweep()`/`summarize_sweep()`, the same
+engine `nhst-power.R` uses, now read through a different lens.
+
+## Element-by-element walkthrough
+
+### Part A: ART3 as a concrete anchor
+
+#### `simulate_art3_battery()` and `plot_art3_rates()`
+
+```{r}
+#| label: show-simulate-art3-battery
+#| eval: false
+d <- simulate_battery(n, reliability = list(ART3 = rel_val), seed = seed, keep_latent = TRUE)
+hits    <- round((1 - d$ART3_fn_rate) * sp$split[["authors"]])
+rejects <- round((1 - d$ART3_fp_rate) * sp$split[["foils"]])
+true_ability <- (d$ART3_theta - cal$theta_mu) / cal$theta_sigma
+```
+
+Rather than re-implementing ART3's item-level draw, this reuses
+`simulate_battery()`'s existing `ART3_fn_rate`/`ART3_fp_rate` columns and
+backs out the raw `hits`/`rejects` counts from them — one less place for
+the two codebases to drift apart. `true_ability` re-derives the
+standardized ability `simulate_battery()` doesn't return directly (only the
+logit-scale `theta`), by inverting the calibration it was built from.
+
+```{r}
+#| label: demo-art3-rates
+#| fig-width: 6
+#| fig-height: 5
+plot_art3_rates(n = 500, seed = 1)
+```
+
+::: {.callout-note title="Why these two rates move together"}
+`cor(fp_rate, fn_rate)` across a large simulated sample comes out strongly
+**positive** (around .8), and the figure above shows it: people with a low
+false-negative rate also tend to have a low false-positive rate. This is a
+direct consequence of a modeling choice documented in
+`psych-battery-dgp.R` — ART3 uses a single probability `p` per person for
+*both* correctly recognizing an author and correctly rejecting a foil
+(`hits ~ Binomial(60, p)`, `rejects ~ Binomial(30, p)`), rather than the two
+separate parameters (sensitivity and response criterion) a full
+signal-detection-theory model would use. That's a deliberate simplification
+for this teaching battery, not an attempt at a psychometrically faithful
+recognition-memory model — worth knowing before reading too much into the
+exact *shape* of this scatter, even though the false-positive/false-negative
+rates themselves are genuine.
+:::
+
+#### `evaluate_art3_rule()`: one application of a decision rule
+
+```{r}
+#| label: show-evaluate-art3-rule-core
+#| eval: false
+truth_positive     <- d$ART3_theta > cal$theta_mu   # true ability above the population average
+predicted_positive <- hits >= k                      # the rule's call
+
+tp <- sum(truth_positive & predicted_positive)
+fn <- sum(truth_positive & !predicted_positive)
+fp <- sum(!truth_positive & predicted_positive)
+tn <- sum(!truth_positive & !predicted_positive)
+```
+
+The rule being evaluated — "classify as a frequent reader if `hits >= k`"
+— needs a ground truth to be right or wrong *against*, and `theta_mu` (the
+population's average true recognition ability, on the calibrated logit
+scale) supplies one: being truly above average is independent of how the
+noisy classification turns out, which is exactly the property a ground
+truth needs.
+
+```{r}
+#| label: demo-evaluate-art3-rule
+evaluate_art3_rule(n = 300, k = 40, seed = 2)
+```
+
+One call, one sample, one set of rates — and, by itself, not yet
+informative about the *rule*: a different seed at the same `n` and `k` will
+give a visibly different `fpr`/`tpr` pair. That instability is the reason
+Part A doesn't stop here.
+
+#### `sweep_art3_rule()` and `plot_art3_roc()`: the rule's long-run operating curve
+
+```{r}
+#| label: demo-sweep-art3-rule
+sweep_small <- sweep_art3_rule(n = 300, k_grid = c(30, 40, 50), reps = 50, seed_base = 3)
+aggregate(cbind(fpr, tpr) ~ k, sweep_small, mean)
+```
+
+`sweep_art3_rule()` repeats `evaluate_art3_rule()` at each threshold in
+`k_grid`, drawing a **fresh** sample of `n` people each time — the single
+mechanism that turns "one classification's noisy outcome" into "the rule's
+actual operating characteristics," by averaging over many independent
+applications rather than trusting any one of them.
+
+```{r}
+#| label: demo-art3-roc
+#| fig-width: 6.5
+#| fig-height: 5.5
+plot_art3_roc(n = 300, k_grid = seq(25, 50, by = 5), reps = 200, seed_base = 2)
+```
+
+Read the pale cloud and the red line as two different claims. The cloud —
+one dot per replicate — is how noisy a *single* application of the rule's
+reported false-positive/true-positive rate can be, even at a respectable
+`n = 300`. The red line connects each threshold's *average* over 200
+replicates, and it traces a textbook ROC-style trade-off: tightening `k`
+(demanding more recognized authors before calling someone a frequent
+reader) buys a lower false-positive rate at the cost of a lower true-positive
+rate, and no threshold minimizes both. That trade-off — not any particular
+point on it — is the property of the *rule*, in the Neyman-Pearson sense:
+knowable in advance, by simulation or by theory, before the rule is ever
+applied to a real person.
+
+### Part B: the same logic, abstracted to a fixed-alpha NHST procedure
+
+#### `run_reliability_sweep()` and `plot_reliability_heatmap()`: holding the right thing fixed
+
+This is the script's most distinctive piece of code, and it exists because
+of a real bug caught while building this script — worth reading in full:
+
+```{r}
+#| label: show-run-reliability-sweep-full
+run_reliability_sweep
+```
+
+::: {.callout-note title="A real bug this function fixes"}
+The first version of `plot_reliability_heatmap()` called
+`psych-battery-dgp.R`'s `run_sweep()` directly, sweeping `reliability_grid`
+while holding `true_corr` fixed on the **observed** scale (`run_sweep()`'s
+default interpretation) — e.g. "hold StuVoc1-GK's correlation at .67 while
+reliability drops from .9 to .3." That request is not always satisfiable:
+disattenuating an observed r = .67 back through a shared reliability of .3
+requires a *latent* correlation above 1, which `disattenuate()` can only
+handle by capping it at .999 and issuing a warning. Run across a whole
+reliability grid, that produced a wall of repeated capping warnings and,
+worse, a heatmap whose low-reliability cells were all silently simulating
+the *same* near-1.0 latent correlation rather than the requested .67
+observed correlation — a wrong figure that happened not to crash.
+
+The fix is the same device `sampling-measurement-error.R`'s
+`simulate_attenuation_sweep()` already uses: hold the **latent**
+(construct-level) correlation fixed instead, and let the **observed**
+correlation — and therefore its significance, sign, and coverage — respond
+to reliability, which is the actual point of this figure. `true_corr_latent
+* reliability` (both tests share one reliability value here) gives the
+*implied* observed correlation at each cell, which is what actually gets
+tested for significance/sign/coverage, and which is written into the
+output's `true_corr` column so `summarize_sweep()` can be reused with no
+changes at all.
+:::
+
+```{r}
+#| label: demo-reliability-heatmap
+#| fig-width: 7.5
+#| fig-height: 5
+plot_reliability_heatmap("StuVoc1", "GK", n_grid = c(20, 50, 100, 200, 400),
+                          reliability_grid = seq(0.3, 0.9, by = 0.1), reps = 150, seed_base = 3)
+```
+
+Power climbs with both axes, as it should: more participants and a more
+reliable measure both make a real effect easier to detect, and the figure
+makes visible just how much reliability alone costs — at `reliability =
+.3`, even `n = 20` only reaches 19% power, where the same `n` at
+`reliability = .9` already reaches 97%.
+
+#### `plot_true_corr_heatmap()` and `plot_process_control_overview()`
+
+```{r}
+#| label: demo-true-corr-heatmap
+#| fig-width: 7
+#| fig-height: 4
+plot_true_corr_heatmap("StuVoc1", "GK", n_grid = c(20, 50, 100, 200, 400),
+                        true_corr_grid = c(0, 0.2, 0.67), reps = 200, seed_base = 4)
+```
+
+Unlike `plot_reliability_heatmap()`, this one can safely reuse `run_sweep()`
+directly, because reliability is held fixed at a sensible default rather
+than swept down toward the disattenuation ceiling — the `true_corr = 0` row
+is the empirical false-positive rate, and it should (and does) stay low and
+flat across every `n`, unlike the other two rows.
+
+```{r}
+#| label: demo-process-control-overview
+#| fig-width: 7.5
+#| fig-height: 6.5
+plot_process_control_overview("StuVoc1", "GK", n_grid = c(20, 50, 100, 200, 400), reps = 200, seed_base = 5)
+```
+
+All three panels answer the same underlying question Part A's ROC figure
+did — "what happens if this exact procedure is applied over and over?" —
+just for a significance test rather than a classification rule. The
+`true_corr = 0` curves are the figure's real payoff: a flat, low power/Type
+I-rate line and a (largely undefined, since there's no "correct sign" under
+a true null) blank sign-consistency panel are what a well-behaved testing
+procedure looks like when there's nothing there to find, in exactly the
+sense Neyman and Pearson meant the "size" of a test's rejection region to
+be fixed and known in advance [@neyman1933] — not inferred after the fact
+from how convincing any one result felt.
+
+#### A fourth error rate, on its own axis: `plot_type_m_curve()`
+
+`summarize_sweep()` computes one more quantity than the three panels above
+show: `type_m_ratio`, the median `|estimate| / |true_corr|` among
+*significant* results only — the Type M "exaggeration ratio" [@gelman2014].
+It answers a different question from power/Type I/sign-consistency/
+coverage: not "does this procedure reach the right decision?", but "when it
+rejects, how distorted is the number it hands back?"
+
+::: {.callout-note title="Why this isn't a fourth panel in `plot_process_control_overview()`"}
+`type_m_ratio` is deliberately kept out of the three-panel overview above,
+not folded in as a fourth facet. Power, sign consistency, and coverage are
+all proportions bounded to `[0, 1]`, which is what lets
+`plot_metrics_vs_x()` share one y-axis across them. An exaggeration ratio
+is `1` at no inflation and can comfortably exceed `2`–`3` at low power —
+sharing that `[0, 1]` axis would silently clip the part of the story that
+matters most. `plot_type_m_curve()` is a separate figure built around its
+own appropriately scaled axis instead.
+:::
+
+```{r}
+#| label: demo-type-m-curve
+#| fig-width: 7
+#| fig-height: 4.5
+plot_type_m_curve("StuVoc1", "GK", n_grid = c(10, 15, 20, 30, 50, 100, 200),
+                   true_corr_grid = 0.2, reps = 500, seed_base = 6)
+```
+
+A true correlation of .2 (rather than this pair's own ≈.67) is used here
+deliberately, for the same reason `nhst-power-walkthrough.qmd` sweeps a
+narrower `n` range for its corridor plot: a strong effect like StuVoc1–GK's
+actual correlation reaches high power — and so, low exaggeration — almost
+immediately, leaving nothing dramatic to see. At a true correlation of .2
+(the same weak-effect benchmark @vermeiren2023's own power illustration uses), a
+significant result at `n = 10` overstates the true correlation by a median
+factor of roughly 3.5×; by `n = 200` that's fallen to close to 1×. Nothing
+is wrong with any individual significant study along the way — the
+inflation is a consequence of *selecting on significance*, which forces
+every significant result at small `n` to clear a high bar (`|r|` has to
+exceed roughly .44 to be significant at `n = 20`, for instance), and the
+smaller the true effect relative to that bar, the more a result has to be
+pulled upward by sampling variation to clear it at all.
+
+## Quarto usage / integration
+
+This script is standalone, like the other three in this set — not sourced
+into `doing-being-science.qmd`. A typical setup chunk:
+
+```r
+source("psych-battery-dgp.R")
+source("error-rates-process-control.R")
+```
+
+### Parameter quick reference
+
+| Function | Parameter | Default | Meaning |
+|---|---|---|---|
+| `evaluate_art3_rule()` / `sweep_art3_rule()` / `plot_art3_roc()` | `k` / `k_grid` | — | Classification threshold(s): "frequent reader" if `hits >= k`. |
+| | `n` | — | Participants per single application of the rule. |
+| | `reps` | `200` | Independent applications of the rule per threshold (sweep/plot only). |
+| | `reliability` | `NULL` | ART3's reliability; `NULL` uses its Vermeiren-default value. |
+| `run_reliability_sweep()` / `plot_reliability_heatmap()` | `reliability_grid` | — | Reliability values to sweep (applied to both tests equally). |
+| | `true_corr_latent` | `NULL` | The *true* (disattenuated) correlation held fixed; `NULL` backs it out from the pair's Vermeiren-default observed correlation. |
+| `plot_true_corr_heatmap()` / `plot_process_control_overview()` | `true_corr_grid` | `NULL` (overview) / — (heatmap) | Observed-scale correlations to sweep; the overview's `NULL` default uses `c(0, <pair's Vermeiren-default r>)`. |
+| | `reliability` | `NULL` | Reliability applied to both tests; `NULL` uses `var_x`'s Vermeiren-default value. |
+| `plot_reliability_heatmap()` / `plot_true_corr_heatmap()` | `metric` | `"power_or_type1"` | Which `summarize_sweep()` column to plot: `"power_or_type1"`, `"sign_consistency"`, or `"coverage"` (not `"type_m_ratio"` — see `plot_type_m_curve()`). |
+| `plot_type_m_curve()` | `true_corr_grid` | `NULL` | Observed-scale correlation(s) to compute the exaggeration ratio for; `NULL` uses the pair's Vermeiren-default value only (unlike the other Part B functions, **not** `c(0, ...)` — `type_m_ratio` is `NA` under the null). |
+| | `n_grid` | — | Sample sizes to sweep. |
+| *(sweep-based functions)* | `seed_base` | `1234` | Base seed for deterministic per-cell seeding. |
+
+### Common errors
+
+| Message | Likely cause |
+|---|---|
+| `` `n` must be a positive integer `` | `n <= 0` passed to `simulate_art3_battery()`/`evaluate_art3_rule()`. |
+| `` `k` must be between 0 and 60 (the number of author items in ART3) `` | `k` outside ART3's valid range of recognizable authors. |
+| `` `reps` must be at least 1 `` | `sweep_art3_rule()` called with `reps = 0`. |
+| `` `metric` must be one of power_or_type1, sign_consistency, coverage `` | A misspelled or unsupported `metric` passed to either heatmap function. |
+| Warning: `achieved reliability (...) differs from the requested target (...)` | A `reliability`/`reliability_grid` value pushed calibration outside tolerance — see `psych-battery-dgp.R`'s `calibrate_ability_general()`. |
+| Warning: `Target observed correlation r = ... is not achievable at ...` | `plot_true_corr_heatmap()`'s `true_corr_grid` includes a value too large for the `reliability` in effect; **this is the exact warning `run_reliability_sweep()` was built to avoid** when sweeping reliability itself (see the callout above). |
+
+## Exercises
+
+1. Call `evaluate_art3_rule(n = 300, k = 40, seed = s)` for `s` in `1:10`.
+   How much does `fpr` vary across the ten single applications? Compare
+   that spread to the tight red trajectory in `plot_art3_roc()`'s `k = 40`
+   point, built from 200 applications rather than one.
+2. Lower ART3's `reliability` to `0.5` in `plot_art3_roc()` (via the
+   `reliability` argument) and compare the resulting curve to the default
+   (`reliability = .9`) version above. Does the trade-off get better or
+   worse, and does that match what you'd predict from more measurement
+   error?
+3. Run `plot_reliability_heatmap()` for StuVoc1-ART3 (a weaker pair, r
+   ≈ .52) instead of StuVoc1-GK. At `n = 100`, how much more does power
+   suffer from the same reliability drop, compared to the StuVoc1-GK
+   heatmap above?
+4. Request `plot_true_corr_heatmap("StuVoc1", "GK", n_grid = c(50, 200),
+   true_corr_grid = c(0.67), reliability = 0.2)` — deliberately low
+   reliability with a high requested observed correlation. Confirm you get
+   the "not achievable" warning from the Common Errors table, and explain
+   in your own words why `plot_reliability_heatmap()`'s
+   `run_reliability_sweep()` approach doesn't have the same problem.
+5. Pick a `metric` other than the default (`"sign_consistency"` or
+   `"coverage"`) for `plot_process_control_overview()`'s underlying
+   `run_sweep()` call (via `summarize_sweep()`'s output directly, since
+   `plot_process_control_overview()` always shows all three). Which of the
+   three looks most stable across `n`, and which looks most sensitive to
+   it?
+6. Re-run `plot_type_m_curve("StuVoc1", "StuVoc2", ...)` (r ≈ .82, a much
+   stronger effect than the true correlation of .2 used above) across the
+   same `n_grid = c(10, 15, 20, 30, 50, 100, 200)`. How much smaller is the
+   exaggeration ratio at `n = 10`, and does it still fall toward 1 by
+   `n = 200`, or has it already arrived there well before that?
+
+## See also
+
+- [psych-battery-dgp-walkthrough.qmd](psych-battery-dgp-walkthrough.qmd) —
+  the shared simulation/sweep engine (`run_sweep()`, `summarize_sweep()`,
+  `disattenuate()`) this script's Part B builds on directly.
+- [sampling-measurement-error-walkthrough.qmd](sampling-measurement-error-walkthrough.qmd)
+  — `simulate_attenuation_sweep()`'s latent-vs-observed correlation device,
+  reused (and the bug it would have prevented, explained) in
+  `run_reliability_sweep()` above.
+- [nhst-power-walkthrough.qmd](nhst-power-walkthrough.qmd) — the single-study
+  and power-curve framing this script's Part B reframes as long-run
+  process-control error rates rather than individual-study outcomes.
+
+## References

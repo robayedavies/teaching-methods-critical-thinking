@@ -1,0 +1,369 @@
+---
+title: "`sampling-measurement-error.R`: measurement error vs. sampling error"
+subtitle: "Walkthrough: how the script works, and how to use it in Quarto"
+format:
+  html:
+    code-fold: false
+    toc: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+## Aims
+
+`sampling-measurement-error.R` uses the four-test psychological battery
+simulated by `psych-battery-dgp.R` (StuVoc1, StuVoc2, GK, ART3, grounded in
+@vermeiren2023) to draw out a distinction that's easy to state and easy to
+blur in practice: **measurement error** and **sampling error** are different
+things, caused by different mechanisms, fixed by different means, and this
+script gives each one its own pair of figures so they can't be confused.
+
+- **Measurement error** is noise in *one person's* score, caused by a test
+  having only finitely many items (or author/foil names) to sample responses
+  from. It's controlled by a test's **reliability**. Lower reliability widens
+  the scatter of a person's observed score around their true ability, and —
+  the consequence that matters most for research — it **attenuates** any
+  correlation computed from that noisy score, with no change in sample size
+  at all.
+- **Sampling error** is noise in *a study's estimate* (a sample mean, a
+  sample correlation), caused by observing only `n` participants rather than
+  the whole population. It's controlled by **sample size**. A smaller `n`
+  widens the *spread* of a statistic's sampling distribution across repeated
+  studies, without shifting where that distribution is *centred*.
+
+Put the two together and you get the script's organizing claim, demonstrated
+rather than just asserted: **changing N changes the spread of a sampling
+distribution; changing reliability changes its centre (via attenuation), not
+its spread.** `plot_sampling_distribution()` and
+`plot_attenuation_vs_reliability()` are built as a deliberate pair so this
+contrast is visible side by side rather than left implicit.
+
+After working through it, you should be able to:
+
+- explain, using this script's own figures, why "the correlation was weaker
+  than expected" and "the study was underpowered" are not the same diagnosis,
+  and which error source each one points to;
+- generate a measurement-error figure (one test, one person at a time) and a
+  sampling-error figure (one statistic, repeated studies) for a battery test
+  pair of your choosing;
+- predict, roughly, how much an observed correlation will be attenuated at a
+  given reliability, using the classical test theory formula this script
+  simulates directly.
+
+## Prerequisites / assumptions
+
+- **Packages**: `ggplot2`; `ggdist`, for `plot_sampling_distribution()` only
+  (guarded the same way as `sampling-distributions.R`'s `plot_dotpile()` —
+  loading it isn't required just to source the script).
+- **Sourcing**: `psych-battery-dgp.R` must be sourced first — this script
+  uses its `default_test_specs()`, `default_reliability_vec()`,
+  `default_r_obs_matrix()`, `get_calibration()`, `simulate_pair()`, and
+  `disattenuate()` directly rather than re-implementing any calibration
+  machinery.
+- **Reader background**: classical test theory terms (reliability, true
+  score, attenuation) help but aren't required — defined as they come up.
+  Basic `ggplot2` familiarity assumed. Prior reading of
+  `sampling-distributions-walkthrough.qmd` is useful context (same
+  trial-level-up simulation philosophy, single test instead of a battery)
+  but not required.
+
+```{r}
+#| label: source-script
+library(ggdist)
+source("psych-battery-dgp.R")
+source("sampling-measurement-error.R")
+```
+
+## How it works: the process
+
+```{r}
+#| label: model-equation
+#| echo: false
+#| results: asis
+cat(
+  "$$",
+  "\\text{True ability (standardized):} \\quad z_i \\sim N(0, 1)",
+  "$$",
+  "$$",
+  "\\text{Calibrated ability (logit scale):} \\quad \\theta_i = \\theta_\\mu + \\theta_\\sigma z_i",
+  "$$",
+  "$$",
+  "\\text{Per-item probability:} \\quad p_i = \\text{guessing} + (1 - \\text{guessing}) \\cdot \\text{plogis}(\\theta_i)",
+  "$$",
+  "$$",
+  "\\text{4AFC tests (StuVoc1, StuVoc2, GK):} \\quad \\text{score}_i \\sim \\text{Binomial}(n_{\\text{items}}, p_i)",
+  "$$",
+  sep = "\n"
+)
+```
+
+Every figure in this script is built from the same single-test generator,
+`simulate_single_test()` (or its two-draws-per-person sibling,
+`simulate_parallel_forms_battery()`), which is itself a thin wrapper around
+`psych-battery-dgp.R`'s `get_calibration()` — the numerical solver that
+finds the `(theta_mu, theta_sigma)` pair reproducing a target mean score and
+reliability, same device as `sampling-distributions.R`'s
+`calibrate_ability()`, generalized to handle a 4AFC guessing floor and
+ART3's author/foil split.
+
+```{mermaid}
+flowchart LR
+    A["psych-battery-dgp.R\nget_calibration()\nsolves theta_mu, theta_sigma\nfor target mu + reliability"] --> B["simulate_single_test()\nz ~ N(0,1)  (true ability)\np = guessing + (1-guessing)*plogis(theta)\nscore ~ Binomial(n_items, p)"]
+    B --> C["plot_true_vs_observed()\nscore vs true ability --\nvertical scatter = measurement error"]
+    A --> D["simulate_parallel_forms_battery()\ntwo independent score draws\nfrom the same theta_i"]
+    D --> E["plot_parallel_forms()\nform1 vs form2 --\nr approx reliability"]
+    A --> F["simulate_sampling_distribution()\nrepeat across n_studies,\none N at a time"]
+    F --> G["plot_sampling_distribution()\nfacet by N --\nspread shrinks as N grows"]
+    A --> H["simulate_attenuation_sweep()\nsimulate_pair(corr_scale='latent'),\ntrue corr fixed, reliability varied"]
+    H --> I["plot_attenuation_vs_reliability()\nobserved r vs reliability --\ncentre shifts (attenuation)"]
+```
+
+The two right-hand branches are the ones to pay attention to: `F`/`G` holds
+reliability fixed and varies `n`, `H`/`I` holds `n` fixed and varies
+reliability. Same shared calibration engine, two different "dials" turned
+one at a time.
+
+## Element-by-element walkthrough
+
+### Measurement error, one test at a time: `simulate_single_test()` and `plot_true_vs_observed()`
+
+```{r}
+#| label: show-simulate-single-test
+#| eval: false
+sp  <- specs[[test]]
+cal <- get_calibration(sp$mu, rel, sp$n_items, sp$guessing)
+z     <- rnorm(n)
+theta <- cal$theta_mu + cal$theta_sigma * z
+p     <- sp$guessing + (1 - sp$guessing) * plogis(theta)
+score <- rbinom(n, sp$n_items, p)   # ART3 branches into hits + rejects instead
+```
+
+`z` is each simulated person's **true ability**, standardized to mean 0 / SD
+1 — something a real researcher never observes directly. `score` is what a
+real researcher *does* observe, and the gap between the two is measurement
+error. Because `score` is drawn from a `Binomial`, not computed as a smooth
+function of `z`, that gap is baked into the simulation structurally, not
+added afterwards as noise.
+
+```{r}
+#| label: demo-true-vs-observed
+#| fig-width: 7
+#| fig-height: 4.2
+plot_true_vs_observed("StuVoc1", n = 300, seed = 1)
+```
+
+The red curve is the *expected* score at each ability level (`n_items *
+p`); every point's vertical distance from it is that person's measurement
+error for this one administration. Lower the `reliability` argument and the
+same plot shows a visibly fatter scatter around an unchanged curve — spread
+increases, but the curve (and hence the relationship between true ability
+and expected score) doesn't move.
+
+### Parallel forms: `simulate_parallel_forms_battery()` and `plot_parallel_forms()`
+
+```{r}
+#| label: show-parallel-forms
+#| eval: false
+draw_once <- function() rbinom(n, sp$n_items, p)   # same p both times
+data.frame(id = seq_len(n), test = test, true_ability = z,
+           form1 = draw_once(), form2 = draw_once(), reliability = rel)
+```
+
+Two independent score draws from the *same* `theta_i` (and hence the same
+`p`) is the textbook definition of reliability: it's the correlation you'd
+see if you could test the same person twice under identical conditions.
+That's exactly what `cor(form1, form2)` recovers:
+
+```{r}
+#| label: demo-parallel-forms
+#| fig-width: 6
+#| fig-height: 5
+plot_parallel_forms("StuVoc1", n = 500, seed = 2)
+d_pf <- simulate_parallel_forms_battery("StuVoc1", n = 20000, seed = 22)
+cor(d_pf$form1, d_pf$form2)
+```
+
+::: {.callout-note title="Why this, and not StuVoc1 vs. StuVoc2?"}
+`simulate_parallel_forms_battery()` re-administers the *same* test, not two
+different tests. StuVoc1 and StuVoc2 are highly correlated (r ≈ .82 per
+@vermeiren2023) but are not strictly parallel forms of one underlying test
+— they're two related-but-distinct vocabulary subtests. For a clean
+demonstration that reliability *is* parallel-forms correlation, this script
+simulates two independent administrations of one test rather than reusing
+StuVoc1/StuVoc2 for that purpose.
+:::
+
+### Sampling error across repeated studies: `simulate_sampling_distribution()` and `plot_sampling_distribution()`
+
+```{r}
+#| label: show-sampling-distribution
+#| eval: false
+values <- vapply(seq_len(n_studies), function(s) {
+  d <- simulate_pair(n, var_x, var_y, true_corr = tc, corr_scale = "observed",
+                      reliability_x = rel_x, reliability_y = rel_y, seed = NULL)
+  cor(d[[var_x]], d[[var_y]])
+}, numeric(1))
+```
+
+This is the sampling-distribution idea made concrete: simulate an entire
+study — not one person — `n_studies` times, each time computing the same
+statistic (a sample mean or a sample correlation), and look at how that
+collection of per-study estimates is spread out. Reliability stays fixed
+throughout; only `n` (passed in from `plot_sampling_distribution()`'s
+`n_grid`) changes across panels.
+
+```{r}
+#| label: demo-sampling-distribution
+#| fig-width: 7
+#| fig-height: 6
+plot_sampling_distribution(n_grid = c(30, 100, 400), n_studies = 300, statistic = "cor",
+                            var_x = "StuVoc1", var_y = "GK", seed = 4)
+```
+
+All three panels are centred at roughly the same value (the population
+StuVoc1–GK correlation, ≈ .67) because reliability — and therefore
+attenuation — hasn't changed. Only the *spread* shrinks as `n` climbs from
+30 to 400, which is sampling error shrinking, not measurement error.
+
+### Attenuation: `simulate_attenuation_sweep()` and `plot_attenuation_vs_reliability()`
+
+This is the script's most distinctive piece of code, and the one most worth
+reading in full rather than trimmed, because the single detail that makes it
+work — `corr_scale = "latent"` — is easy to get backwards:
+
+```{r}
+#| label: show-attenuation-sweep-full
+simulate_attenuation_sweep
+```
+
+::: {.callout-note title="`corr_scale = \"latent\"`, not `\"observed\"`"}
+`simulate_pair()` (from `psych-battery-dgp.R`) supports two ways of
+interpreting `true_corr`: `"observed"` treats it as the target *observed*-score
+correlation and disattenuates internally to find the latent correlation that
+will produce it — the right choice for the NHST/power work, where the
+population parameter being tested lives on the observed scale. Here, the
+opposite is wanted: a *fixed construct-level relationship*, with reliability
+left free to vary and the *observed* correlation left free to respond to it.
+That's `corr_scale = "latent"` — `true_corr_latent` is handed to
+`simulate_pair()` untouched, and the whole point of the figure is to watch
+the *observed* correlation move as reliability does.
+:::
+
+```{r}
+#| label: demo-attenuation
+#| fig-width: 7
+#| fig-height: 4.5
+plot_attenuation_vs_reliability(reliability_grid = seq(0.2, 0.9, by = 0.1),
+                                 n = 300, reps = 300,
+                                 var_x = "StuVoc1", var_y = "GK", seed = 5)
+```
+
+The blue line (simulated mean observed correlation, with a ribbon showing
+the spread across the 300 replicate studies run at each reliability value)
+tracks the dashed red theoretical line almost exactly: $r_{\text{obs}} =
+r_{\text{true}} \times \text{reliability}$, the classical test theory
+attenuation formula, here simulated rather than just asserted. The dotted
+line marks the ceiling — the correlation you'd see if both tests were
+measured with no error at all.
+
+## Quarto usage / integration
+
+This script is standalone — it isn't currently sourced into
+`doing-being-science.qmd` (that deck's figure sequence is built from the
+icon/number pairing in `person-grid.R` / `testing-sequence.R` /
+`sampling-distributions.R`; this script is a separate, inferential-statistics
+demonstration). A typical setup chunk:
+
+```r
+library(ggdist)
+source("psych-battery-dgp.R")
+source("sampling-measurement-error.R")
+```
+
+and then any of the four demo calls shown above. All four `plot_*()`
+functions return a plain `ggplot` object, so they combine with `patchwork`
+or further `ggplot2` layers like any other plot.
+
+### Parameter quick reference
+
+| Function | Parameter | Default | Meaning |
+|---|---|---|---|
+| `simulate_single_test()` / `plot_true_vs_observed()` | `test` | `"StuVoc1"` | Which battery test: `StuVoc1`, `StuVoc2`, `GK`, or `ART3`. |
+| | `n` | — | Number of simulated participants. |
+| | `reliability` | `NULL` | Dial (ii); `NULL` uses the test's Vermeiren-default value. |
+| `simulate_parallel_forms_battery()` / `plot_parallel_forms()` | *(same as above)* | | Two independent score draws per person from the same true ability. |
+| `simulate_sampling_distribution()` / `plot_sampling_distribution()` | `n` / `n_grid` | — | Dial (i); `plot_*()` takes a vector (`n_grid`) for a faceted comparison. |
+| | `n_studies` | — | Independent studies simulated per `n`/panel. |
+| | `statistic` | — | `"mean"` (one test) or `"cor"` (a pair, needs `var_y`). |
+| | `true_corr` | `NULL` | Population *observed*-score correlation to simulate from; `NULL` uses the Vermeiren-default for the pair. |
+| `simulate_attenuation_sweep()` / `plot_attenuation_vs_reliability()` | `reliability_grid` | — | Dial (ii), swept; applied equally to `var_x` and `var_y`. |
+| | `n` | `300` | Participants per replicate study (held fixed across the sweep). |
+| | `reps` | `200` | Replicate studies simulated per reliability value. |
+| | `true_corr_latent` | `NULL` | The fixed construct-level correlation; `NULL` backs it out from the Vermeiren-default observed correlation and reliabilities via `disattenuate()`. |
+| *(all functions)* | `seed` | `NULL` | Reproducibility. |
+
+### Common errors
+
+| Message | Likely cause |
+|---|---|
+| `` `test` must be one of StuVoc1, StuVoc2, GK, ART3 `` | Misspelled or unsupported test name passed to `simulate_single_test()` / `simulate_parallel_forms_battery()`. |
+| `` `reliability` must be strictly between 0 and 1 `` | A reliability of 0, 1, or outside that range was supplied directly. |
+| `` `var_y` must be supplied when statistic = 'cor' `` | `simulate_sampling_distribution(statistic = "cor", ...)` called without `var_y`. |
+| `` `n_studies` must be at least 2 to show a distribution `` | `n_studies` too small to compute a spread. |
+| `` `var_x` and `var_y` must be different tests `` | Same test name passed twice to `simulate_attenuation_sweep()`. |
+| `` `reliability_grid` values must all be strictly between 0 and 1 `` | A sweep value of 0 or 1 (or outside that range) was included. |
+| `` `reps` must be at least 2 `` | `reps` too small to compute a spread at each reliability value. |
+| `Package 'ggdist' is required for plot_sampling_distribution()` | `ggdist` not installed; install with `install.packages("ggdist")`. |
+
+## Exercises
+
+1. Call `plot_true_vs_observed("StuVoc1", n = 300, reliability = 0.95, seed = 1)`
+   and then the same call with `reliability = 0.5`. How does the scatter
+   around the red curve change, and does the curve itself move?
+2. Run `plot_parallel_forms("ART3", n = 500, seed = 2)` and confirm the
+   observed `r(form1, form2)` lands close to ART3's default reliability
+   (.90). Then try `reliability = 0.6` — does the point cloud still look
+   like a straight line, just noisier, or does its shape change?
+3. Use `simulate_sampling_distribution()` with `statistic = "mean"`,
+   `var_x = "GK"`, at `n = 20` and `n = 500` (300 studies each). Compare
+   `sd()` of the two `value` columns — is the ratio close to what you'd
+   predict from $\sqrt{500/20}$?
+4. Using `simulate_attenuation_sweep()` for StuVoc1 and ART3 (default
+   `true_corr_latent`, backed out from their Vermeiren-default observed
+   correlation of ≈ .52), find roughly what reliability would be needed
+   for the *observed* correlation to drop below .20.
+5. Predict, then check: if reliability is fixed at .95 but `n` shrinks to
+   10, does `plot_sampling_distribution()` for the StuVoc1–GK
+   correlation look wide or narrow? Explain in your own words why that's a
+   sampling-error effect, not a measurement-error one, even though
+   reliability is high.
+
+## See also
+
+- [sampling-distributions-walkthrough.qmd](sampling-distributions-walkthrough.qmd)
+  — the single-test prior art this script generalizes: same trial-level-up
+  simulation philosophy and the same `calibrate_ability()`/parallel-forms
+  pattern, applied to one Shipley-style test rather than a four-test
+  battery.
+- [psych-battery-dgp-walkthrough.qmd](psych-battery-dgp-walkthrough.qmd) —
+  the shared calibration/simulation engine this script is built on
+  (`get_calibration()`, `simulate_pair()`, `disattenuate()`,
+  `default_test_specs()`), including its own validation check against
+  @vermeiren2023's reported test statistics.
+- [nhst-power-walkthrough.qmd](nhst-power-walkthrough.qmd) — uses the same
+  battery and the same `simulate_pair()`/disattenuation machinery to ask a
+  different question: not "how spread out is this estimate" but "how often
+  would a fixed significance-testing procedure detect a real effect, or be
+  fooled by none."
+- [error-rates-process-control-walkthrough.qmd](error-rates-process-control-walkthrough.qmd)
+  — reuses this script's `simulate_attenuation_sweep()` device (hold the
+  *latent* correlation fixed, not the observed one, when sweeping
+  reliability) in its own `run_reliability_sweep()`, and explains a real
+  bug that device was built to avoid.
+
+## References

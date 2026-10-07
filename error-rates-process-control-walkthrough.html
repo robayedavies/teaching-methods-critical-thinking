@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>error-rates-process-control.R: false positives and false negatives as process-control error rates</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="error-rates-process-control-walkthrough_files/libs/clipboard/clipboard.min.js"></script>
+<script src="error-rates-process-control-walkthrough_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="error-rates-process-control-walkthrough_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="error-rates-process-control-walkthrough_files/libs/quarto-html/popper.min.js"></script>
+<script src="error-rates-process-control-walkthrough_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="error-rates-process-control-walkthrough_files/libs/quarto-html/anchor.min.js"></script>
+<link href="error-rates-process-control-walkthrough_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="error-rates-process-control-walkthrough_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="error-rates-process-control-walkthrough_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="error-rates-process-control-walkthrough_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="error-rates-process-control-walkthrough_files/libs/bootstrap/bootstrap-917079515d91bccb85b543faf8aa8bb6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="error-rates-process-control-walkthrough_files/libs/quarto-diagram/mermaid.min.js"></script>
+<script src="error-rates-process-control-walkthrough_files/libs/quarto-diagram/mermaid-init.js"></script>
+<link href="error-rates-process-control-walkthrough_files/libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#aims" id="toc-aims" class="nav-link active" data-scroll-target="#aims">Aims</a></li>
+  <li><a href="#prerequisites-assumptions" id="toc-prerequisites-assumptions" class="nav-link" data-scroll-target="#prerequisites-assumptions">Prerequisites / assumptions</a></li>
+  <li><a href="#how-it-works-the-process" id="toc-how-it-works-the-process" class="nav-link" data-scroll-target="#how-it-works-the-process">How it works: the process</a></li>
+  <li><a href="#element-by-element-walkthrough" id="toc-element-by-element-walkthrough" class="nav-link" data-scroll-target="#element-by-element-walkthrough">Element-by-element walkthrough</a>
+  <ul class="collapse">
+  <li><a href="#part-a-art3-as-a-concrete-anchor" id="toc-part-a-art3-as-a-concrete-anchor" class="nav-link" data-scroll-target="#part-a-art3-as-a-concrete-anchor">Part A: ART3 as a concrete anchor</a></li>
+  <li><a href="#part-b-the-same-logic-abstracted-to-a-fixed-alpha-nhst-procedure" id="toc-part-b-the-same-logic-abstracted-to-a-fixed-alpha-nhst-procedure" class="nav-link" data-scroll-target="#part-b-the-same-logic-abstracted-to-a-fixed-alpha-nhst-procedure">Part B: the same logic, abstracted to a fixed-alpha NHST procedure</a></li>
+  </ul></li>
+  <li><a href="#quarto-usage-integration" id="toc-quarto-usage-integration" class="nav-link" data-scroll-target="#quarto-usage-integration">Quarto usage / integration</a>
+  <ul class="collapse">
+  <li><a href="#parameter-quick-reference" id="toc-parameter-quick-reference" class="nav-link" data-scroll-target="#parameter-quick-reference">Parameter quick reference</a></li>
+  <li><a href="#common-errors" id="toc-common-errors" class="nav-link" data-scroll-target="#common-errors">Common errors</a></li>
+  </ul></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises">Exercises</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See also</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><code>error-rates-process-control.R</code>: false positives and false negatives as process-control error rates</h1>
+<p class="subtitle lead">Walkthrough: how the script works, and how to use it in Quarto</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="aims" class="level2">
+<h2 class="anchored" data-anchor-id="aims">Aims</h2>
+<p><code>error-rates-process-control.R</code> reframes false-positive and false-negative rates — concepts usually introduced as abstract properties of a hypothesis test — as <strong>properties of a decision procedure applied over and over</strong>, in the sense Neyman and Pearson built their theory of hypothesis testing around <span class="citation" data-cites="neyman1933">(<a href="#ref-neyman1933" role="doc-biblioref">Neyman and Pearson 1933</a>)</span>. It does this in two steps, deliberately concrete before abstract:</p>
+<ul>
+<li><strong>Part A</strong> starts from something that needs no statistical machinery at all: ART3, the author-recognition test from <code>psych-battery-dgp.R</code>’s battery <span class="citation" data-cites="vermeiren2023">(<a href="#ref-vermeiren2023" role="doc-biblioref">Vermeiren et al. 2023</a>)</span>, already produces real false positives (saying “yes” to a name that isn’t an author) and real false negatives (saying “no” to a name that is) for every simulated participant. This script turns that into a <strong>decision rule</strong> — “classify someone as a frequent reader if they recognize at least <code>k</code> of the 60 authors” — and asks the question a rule like that actually needs answering: not “was this one classification right?”, but “if this exact rule were applied over and over, how often would it be wrong, and in which direction?”</li>
+<li><strong>Part B</strong> points out that a significance test at a fixed alpha is exactly this kind of rule — “reject H0 if p &lt; alpha” — and reuses <code>psych-battery-dgp.R</code>’s sweep engine to show power, the empirical Type I rate, sign consistency (Type S), and CI coverage behaving exactly like ART3’s rule’s error rates did: stable long-run properties of a fixed procedure, recoverable by repetition, not properties of any one study’s result. A fourth property gets its own figure: the Type M “exaggeration ratio” <span class="citation" data-cites="gelman2014">(<a href="#ref-gelman2014" role="doc-biblioref">Gelman and Carlin 2014</a>)</span> — not whether the procedure’s <em>decision</em> is right, but how distorted the <em>number</em> it reports tends to be, conditional on having rejected.</li>
+</ul>
+<p><span class="citation" data-cites="perezgonzalez2015">Perezgonzalez (<a href="#ref-perezgonzalez2015" role="doc-biblioref">2015</a>)</span> is a useful accessible companion here: it lays out, side by side, how Fisher’s evidential reading of a single p-value differs from Neyman and Pearson’s decision-procedure reading — and how the hybrid most textbooks actually teach quietly borrows language from both without always saying so.</p>
+<p>After working through it, you should be able to:</p>
+<ul>
+<li>explain, using ART3’s own classification rule as a worked example, why a false-positive/false-negative rate is a property of a <em>rule</em>, estimable only by repetition, not a property of any single person’s test result;</li>
+<li>generate a reliability-by-sample-size or a true-correlation-by-sample-size error-rate heatmap for a battery pair of your choosing, and read off where a fixed testing procedure is well- vs.&nbsp;poorly-behaved;</li>
+<li>explain why a significance filter inflates reported effect sizes at low power, and why that inflation is a property of <em>selecting on significance</em>, not a flaw in any individual study;</li>
+<li>state, in your own words, the difference between Neyman and Pearson’s long-run error-rate framing of a significance test and Fisher’s evidential reading of a p-value.</li>
+</ul>
+</section>
+<section id="prerequisites-assumptions" class="level2">
+<h2 class="anchored" data-anchor-id="prerequisites-assumptions">Prerequisites / assumptions</h2>
+<ul>
+<li><strong>Packages</strong>: <code>ggplot2</code> only.</li>
+<li><strong>Sourcing</strong>: <code>psych-battery-dgp.R</code> must be sourced first — this script uses <code>default_test_specs()</code>, <code>default_reliability_vec()</code>, <code>default_r_obs_matrix()</code>, <code>get_calibration()</code>, <code>simulate_battery()</code>, <code>simulate_pair()</code>, <code>fit_focal_cor()</code>, <code>diagnose_cor_result()</code>, <code>disattenuate()</code>, <code>run_sweep()</code>, <code>summarize_sweep()</code>, <code>plot_metrics_vs_x()</code>, and <code>plot_power_heatmap()</code> directly.</li>
+<li><strong>Reader background</strong>: the measurement-error/sampling-error distinction from <code>sampling-measurement-error-walkthrough.qmd</code> and the NHST/power framing from <code>nhst-power-walkthrough.qmd</code> are both drawn on directly here and are worth reading first if unfamiliar; some exposure to the terms “sensitivity”/“specificity” or “true positive rate”/“false positive rate” helps for Part A but is defined as it comes up.</li>
+</ul>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"psych-battery-dgp.R"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"error-rates-process-control.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="how-it-works-the-process" class="level2">
+<h2 class="anchored" data-anchor-id="how-it-works-the-process">How it works: the process</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    A["ART3 item-level responses\nsimulate_art3_battery()"] --&gt; B["evaluate_art3_rule()\none application of a\n'&gt;= k authors' rule"]
+    B --&gt; C["sweep_art3_rule()\nrepeat over k x reps,\na fresh sample each time"]
+    C --&gt; D["plot_art3_roc()\ncloud = single applications,\nred line = the rule's long-run rates"]
+    E["psych-battery-dgp.R\nrun_sweep() / run_reliability_sweep()"] --&gt; F["summarize_sweep()\npower/Type I, sign consistency,\ntype_m_ratio, CI coverage, per grid cell"]
+    F --&gt; G["plot_reliability_heatmap() /\nplot_true_corr_heatmap() /\nplot_process_control_overview()"]
+    F --&gt; H["plot_type_m_curve()\nexaggeration ratio,\nits own (non 0-1) y-axis"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>The two halves share a structure even though they look different: both repeat a fixed procedure many times (Part A: classify <code>n</code> people, <code>reps</code> times, at each threshold <code>k</code>; Part B: run a significance test on <code>n</code> participants, <code>reps</code> times, at each grid cell) and summarize what fraction of those repetitions landed in each outcome category. Nothing in Part B is new simulation machinery — it is entirely orchestration over <code>psych-battery-dgp.R</code>’s existing <code>run_sweep()</code>/<code>summarize_sweep()</code>, the same engine <code>nhst-power.R</code> uses, now read through a different lens.</p>
+</section>
+<section id="element-by-element-walkthrough" class="level2">
+<h2 class="anchored" data-anchor-id="element-by-element-walkthrough">Element-by-element walkthrough</h2>
+<section id="part-a-art3-as-a-concrete-anchor" class="level3">
+<h3 class="anchored" data-anchor-id="part-a-art3-as-a-concrete-anchor">Part A: ART3 as a concrete anchor</h3>
+<section id="simulate_art3_battery-and-plot_art3_rates" class="level4">
+<h4 class="anchored" data-anchor-id="simulate_art3_battery-and-plot_art3_rates"><code>simulate_art3_battery()</code> and <code>plot_art3_rates()</code></h4>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">simulate_battery</span>(n, <span class="at">reliability =</span> <span class="fu">list</span>(<span class="at">ART3 =</span> rel_val), <span class="at">seed =</span> seed, <span class="at">keep_latent =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>hits    <span class="ot">&lt;-</span> <span class="fu">round</span>((<span class="dv">1</span> <span class="sc">-</span> d<span class="sc">$</span>ART3_fn_rate) <span class="sc">*</span> sp<span class="sc">$</span>split[[<span class="st">"authors"</span>]])</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>rejects <span class="ot">&lt;-</span> <span class="fu">round</span>((<span class="dv">1</span> <span class="sc">-</span> d<span class="sc">$</span>ART3_fp_rate) <span class="sc">*</span> sp<span class="sc">$</span>split[[<span class="st">"foils"</span>]])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>true_ability <span class="ot">&lt;-</span> (d<span class="sc">$</span>ART3_theta <span class="sc">-</span> cal<span class="sc">$</span>theta_mu) <span class="sc">/</span> cal<span class="sc">$</span>theta_sigma</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Rather than re-implementing ART3’s item-level draw, this reuses <code>simulate_battery()</code>’s existing <code>ART3_fn_rate</code>/<code>ART3_fp_rate</code> columns and backs out the raw <code>hits</code>/<code>rejects</code> counts from them — one less place for the two codebases to drift apart. <code>true_ability</code> re-derives the standardized ability <code>simulate_battery()</code> doesn’t return directly (only the logit-scale <code>theta</code>), by inverting the calibration it was built from.</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_art3_rates</span>(<span class="at">n =</span> <span class="dv">500</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="error-rates-process-control-walkthrough_files/figure-html/demo-art3-rates-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="576"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Why these two rates move together">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why these two rates move together
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>cor(fp_rate, fn_rate)</code> across a large simulated sample comes out strongly <strong>positive</strong> (around .8), and the figure above shows it: people with a low false-negative rate also tend to have a low false-positive rate. This is a direct consequence of a modeling choice documented in <code>psych-battery-dgp.R</code> — ART3 uses a single probability <code>p</code> per person for <em>both</em> correctly recognizing an author and correctly rejecting a foil (<code>hits ~ Binomial(60, p)</code>, <code>rejects ~ Binomial(30, p)</code>), rather than the two separate parameters (sensitivity and response criterion) a full signal-detection-theory model would use. That’s a deliberate simplification for this teaching battery, not an attempt at a psychometrically faithful recognition-memory model — worth knowing before reading too much into the exact <em>shape</em> of this scatter, even though the false-positive/false-negative rates themselves are genuine.</p>
+</div>
+</div>
+</section>
+<section id="evaluate_art3_rule-one-application-of-a-decision-rule" class="level4">
+<h4 class="anchored" data-anchor-id="evaluate_art3_rule-one-application-of-a-decision-rule"><code>evaluate_art3_rule()</code>: one application of a decision rule</h4>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>truth_positive     <span class="ot">&lt;-</span> d<span class="sc">$</span>ART3_theta <span class="sc">&gt;</span> cal<span class="sc">$</span>theta_mu   <span class="co"># true ability above the population average</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>predicted_positive <span class="ot">&lt;-</span> hits <span class="sc">&gt;=</span> k                      <span class="co"># the rule's call</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>tp <span class="ot">&lt;-</span> <span class="fu">sum</span>(truth_positive <span class="sc">&amp;</span> predicted_positive)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>fn <span class="ot">&lt;-</span> <span class="fu">sum</span>(truth_positive <span class="sc">&amp;</span> <span class="sc">!</span>predicted_positive)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>fp <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="sc">!</span>truth_positive <span class="sc">&amp;</span> predicted_positive)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>tn <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="sc">!</span>truth_positive <span class="sc">&amp;</span> <span class="sc">!</span>predicted_positive)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The rule being evaluated — “classify as a frequent reader if <code>hits &gt;= k</code>” — needs a ground truth to be right or wrong <em>against</em>, and <code>theta_mu</code> (the population’s average true recognition ability, on the calibrated logit scale) supplies one: being truly above average is independent of how the noisy classification turns out, which is exactly the property a ground truth needs.</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">evaluate_art3_rule</span>(<span class="at">n =</span> <span class="dv">300</span>, <span class="at">k =</span> <span class="dv">40</span>, <span class="at">seed =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    n  k reliability n_pos n_neg      tpr        fnr       fpr       tnr
+1 300 40         0.9   164   136 0.902439 0.09756098 0.1323529 0.8676471</code></pre>
+</div>
+</div>
+<p>One call, one sample, one set of rates — and, by itself, not yet informative about the <em>rule</em>: a different seed at the same <code>n</code> and <code>k</code> will give a visibly different <code>fpr</code>/<code>tpr</code> pair. That instability is the reason Part A doesn’t stop here.</p>
+</section>
+<section id="sweep_art3_rule-and-plot_art3_roc-the-rules-long-run-operating-curve" class="level4">
+<h4 class="anchored" data-anchor-id="sweep_art3_rule-and-plot_art3_roc-the-rules-long-run-operating-curve"><code>sweep_art3_rule()</code> and <code>plot_art3_roc()</code>: the rule’s long-run operating curve</h4>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sweep_small <span class="ot">&lt;-</span> <span class="fu">sweep_art3_rule</span>(<span class="at">n =</span> <span class="dv">300</span>, <span class="at">k_grid =</span> <span class="fu">c</span>(<span class="dv">30</span>, <span class="dv">40</span>, <span class="dv">50</span>), <span class="at">reps =</span> <span class="dv">50</span>, <span class="at">seed_base =</span> <span class="dv">3</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">aggregate</span>(<span class="fu">cbind</span>(fpr, tpr) <span class="sc">~</span> k, sweep_small, mean)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   k         fpr       tpr
+1 30 0.622286589 0.9987836
+2 40 0.094747331 0.8515409
+3 50 0.000137931 0.2162233</code></pre>
+</div>
+</div>
+<p><code>sweep_art3_rule()</code> repeats <code>evaluate_art3_rule()</code> at each threshold in <code>k_grid</code>, drawing a <strong>fresh</strong> sample of <code>n</code> people each time — the single mechanism that turns “one classification’s noisy outcome” into “the rule’s actual operating characteristics,” by averaging over many independent applications rather than trusting any one of them.</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_art3_roc</span>(<span class="at">n =</span> <span class="dv">300</span>, <span class="at">k_grid =</span> <span class="fu">seq</span>(<span class="dv">25</span>, <span class="dv">50</span>, <span class="at">by =</span> <span class="dv">5</span>), <span class="at">reps =</span> <span class="dv">200</span>, <span class="at">seed_base =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="error-rates-process-control-walkthrough_files/figure-html/demo-art3-roc-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="624"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Read the pale cloud and the red line as two different claims. The cloud — one dot per replicate — is how noisy a <em>single</em> application of the rule’s reported false-positive/true-positive rate can be, even at a respectable <code>n = 300</code>. The red line connects each threshold’s <em>average</em> over 200 replicates, and it traces a textbook ROC-style trade-off: tightening <code>k</code> (demanding more recognized authors before calling someone a frequent reader) buys a lower false-positive rate at the cost of a lower true-positive rate, and no threshold minimizes both. That trade-off — not any particular point on it — is the property of the <em>rule</em>, in the Neyman-Pearson sense: knowable in advance, by simulation or by theory, before the rule is ever applied to a real person.</p>
+</section>
+</section>
+<section id="part-b-the-same-logic-abstracted-to-a-fixed-alpha-nhst-procedure" class="level3">
+<h3 class="anchored" data-anchor-id="part-b-the-same-logic-abstracted-to-a-fixed-alpha-nhst-procedure">Part B: the same logic, abstracted to a fixed-alpha NHST procedure</h3>
+<section id="run_reliability_sweep-and-plot_reliability_heatmap-holding-the-right-thing-fixed" class="level4">
+<h4 class="anchored" data-anchor-id="run_reliability_sweep-and-plot_reliability_heatmap-holding-the-right-thing-fixed"><code>run_reliability_sweep()</code> and <code>plot_reliability_heatmap()</code>: holding the right thing fixed</h4>
+<p>This is the script’s most distinctive piece of code, and it exists because of a real bug caught while building this script — worth reading in full:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>run_reliability_sweep</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>function (var_x, var_y, n_grid, reliability_grid, true_corr_latent = NULL, 
+    reps = 200, alpha = 0.05, seed_base = 1234) 
+{
+    if (is.null(true_corr_latent)) {
+        rel_default &lt;- default_reliability_vec()
+        r_obs_default &lt;- default_r_obs_matrix()[var_x, var_y]
+        true_corr_latent &lt;- disattenuate(r_obs_default, rel_default[[var_x]], 
+            rel_default[[var_y]])
+    }
+    grid &lt;- expand.grid(n = n_grid, reliability = reliability_grid, 
+        rep = seq_len(reps))
+    rows &lt;- vector("list", nrow(grid))
+    for (i in seq_len(nrow(grid))) {
+        n &lt;- grid$n[i]
+        rel &lt;- grid$reliability[i]
+        rep_i &lt;- grid$rep[i]
+        seed_cell &lt;- seed_base + rep_i * 1e+06 + n * 1000 + round(rel * 
+            1000)
+        implied_obs &lt;- true_corr_latent * rel
+        d &lt;- simulate_pair(n, var_x, var_y, true_corr = true_corr_latent, 
+            corr_scale = "latent", reliability_x = rel, reliability_y = rel, 
+            seed = seed_cell)
+        fit &lt;- fit_focal_cor(d, var_x, var_y)
+        diag &lt;- diagnose_cor_result(fit, implied_obs, alpha)
+        rows[[i]] &lt;- cbind(data.frame(n = n, true_corr = implied_obs, 
+            reliability = rel, rep = rep_i), diag)
+    }
+    out &lt;- do.call(rbind, rows)
+    attr(out, "true_corr_latent") &lt;- true_corr_latent
+    out
+}</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="A real bug this function fixes">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>A real bug this function fixes
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The first version of <code>plot_reliability_heatmap()</code> called <code>psych-battery-dgp.R</code>’s <code>run_sweep()</code> directly, sweeping <code>reliability_grid</code> while holding <code>true_corr</code> fixed on the <strong>observed</strong> scale (<code>run_sweep()</code>’s default interpretation) — e.g.&nbsp;“hold StuVoc1-GK’s correlation at .67 while reliability drops from .9 to .3.” That request is not always satisfiable: disattenuating an observed r = .67 back through a shared reliability of .3 requires a <em>latent</em> correlation above 1, which <code>disattenuate()</code> can only handle by capping it at .999 and issuing a warning. Run across a whole reliability grid, that produced a wall of repeated capping warnings and, worse, a heatmap whose low-reliability cells were all silently simulating the <em>same</em> near-1.0 latent correlation rather than the requested .67 observed correlation — a wrong figure that happened not to crash.</p>
+<p>The fix is the same device <code>sampling-measurement-error.R</code>’s <code>simulate_attenuation_sweep()</code> already uses: hold the <strong>latent</strong> (construct-level) correlation fixed instead, and let the <strong>observed</strong> correlation — and therefore its significance, sign, and coverage — respond to reliability, which is the actual point of this figure. <code>true_corr_latent * reliability</code> (both tests share one reliability value here) gives the <em>implied</em> observed correlation at each cell, which is what actually gets tested for significance/sign/coverage, and which is written into the output’s <code>true_corr</code> column so <code>summarize_sweep()</code> can be reused with no changes at all.</p>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_reliability_heatmap</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">400</span>),</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">reliability_grid =</span> <span class="fu">seq</span>(<span class="fl">0.3</span>, <span class="fl">0.9</span>, <span class="at">by =</span> <span class="fl">0.1</span>), <span class="at">reps =</span> <span class="dv">150</span>, <span class="at">seed_base =</span> <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="error-rates-process-control-walkthrough_files/figure-html/demo-reliability-heatmap-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="720"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Power climbs with both axes, as it should: more participants and a more reliable measure both make a real effect easier to detect, and the figure makes visible just how much reliability alone costs — at <code>reliability = .3</code>, even <code>n = 20</code> only reaches 19% power, where the same <code>n</code> at <code>reliability = .9</code> already reaches 97%.</p>
+</section>
+<section id="plot_true_corr_heatmap-and-plot_process_control_overview" class="level4">
+<h4 class="anchored" data-anchor-id="plot_true_corr_heatmap-and-plot_process_control_overview"><code>plot_true_corr_heatmap()</code> and <code>plot_process_control_overview()</code></h4>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_true_corr_heatmap</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">400</span>),</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>                        <span class="at">true_corr_grid =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.2</span>, <span class="fl">0.67</span>), <span class="at">reps =</span> <span class="dv">200</span>, <span class="at">seed_base =</span> <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="error-rates-process-control-walkthrough_files/figure-html/demo-true-corr-heatmap-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Unlike <code>plot_reliability_heatmap()</code>, this one can safely reuse <code>run_sweep()</code> directly, because reliability is held fixed at a sensible default rather than swept down toward the disattenuation ceiling — the <code>true_corr = 0</code> row is the empirical false-positive rate, and it should (and does) stay low and flat across every <code>n</code>, unlike the other two rows.</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_process_control_overview</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">400</span>), <span class="at">reps =</span> <span class="dv">200</span>, <span class="at">seed_base =</span> <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 5 rows containing missing values or values outside the scale range
+(`geom_line()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 5 rows containing missing values or values outside the scale range
+(`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="error-rates-process-control-walkthrough_files/figure-html/demo-process-control-overview-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="720"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>All three panels answer the same underlying question Part A’s ROC figure did — “what happens if this exact procedure is applied over and over?” — just for a significance test rather than a classification rule. The <code>true_corr = 0</code> curves are the figure’s real payoff: a flat, low power/Type I-rate line and a (largely undefined, since there’s no “correct sign” under a true null) blank sign-consistency panel are what a well-behaved testing procedure looks like when there’s nothing there to find, in exactly the sense Neyman and Pearson meant the “size” of a test’s rejection region to be fixed and known in advance <span class="citation" data-cites="neyman1933">(<a href="#ref-neyman1933" role="doc-biblioref">Neyman and Pearson 1933</a>)</span> — not inferred after the fact from how convincing any one result felt.</p>
+</section>
+<section id="a-fourth-error-rate-on-its-own-axis-plot_type_m_curve" class="level4">
+<h4 class="anchored" data-anchor-id="a-fourth-error-rate-on-its-own-axis-plot_type_m_curve">A fourth error rate, on its own axis: <code>plot_type_m_curve()</code></h4>
+<p><code>summarize_sweep()</code> computes one more quantity than the three panels above show: <code>type_m_ratio</code>, the median <code>|estimate| / |true_corr|</code> among <em>significant</em> results only — the Type M “exaggeration ratio” <span class="citation" data-cites="gelman2014">(<a href="#ref-gelman2014" role="doc-biblioref">Gelman and Carlin 2014</a>)</span>. It answers a different question from power/Type I/sign-consistency/ coverage: not “does this procedure reach the right decision?”, but “when it rejects, how distorted is the number it hands back?”</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Why this isn't a fourth panel in `plot_process_control_overview()`">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why this isn’t a fourth panel in <code>plot_process_control_overview()</code>
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>type_m_ratio</code> is deliberately kept out of the three-panel overview above, not folded in as a fourth facet. Power, sign consistency, and coverage are all proportions bounded to <code>[0, 1]</code>, which is what lets <code>plot_metrics_vs_x()</code> share one y-axis across them. An exaggeration ratio is <code>1</code> at no inflation and can comfortably exceed <code>2</code>–<code>3</code> at low power — sharing that <code>[0, 1]</code> axis would silently clip the part of the story that matters most. <code>plot_type_m_curve()</code> is a separate figure built around its own appropriately scaled axis instead.</p>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_type_m_curve</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">30</span>, <span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>),</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">true_corr_grid =</span> <span class="fl">0.2</span>, <span class="at">reps =</span> <span class="dv">500</span>, <span class="at">seed_base =</span> <span class="dv">6</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="error-rates-process-control-walkthrough_files/figure-html/demo-type-m-curve-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>A true correlation of .2 (rather than this pair’s own ≈.67) is used here deliberately, for the same reason <code>nhst-power-walkthrough.qmd</code> sweeps a narrower <code>n</code> range for its corridor plot: a strong effect like StuVoc1–GK’s actual correlation reaches high power — and so, low exaggeration — almost immediately, leaving nothing dramatic to see. At a true correlation of .2 (the same weak-effect benchmark <span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>’s own power illustration uses), a significant result at <code>n = 10</code> overstates the true correlation by a median factor of roughly 3.5×; by <code>n = 200</code> that’s fallen to close to 1×. Nothing is wrong with any individual significant study along the way — the inflation is a consequence of <em>selecting on significance</em>, which forces every significant result at small <code>n</code> to clear a high bar (<code>|r|</code> has to exceed roughly .44 to be significant at <code>n = 20</code>, for instance), and the smaller the true effect relative to that bar, the more a result has to be pulled upward by sampling variation to clear it at all.</p>
+</section>
+</section>
+</section>
+<section id="quarto-usage-integration" class="level2">
+<h2 class="anchored" data-anchor-id="quarto-usage-integration">Quarto usage / integration</h2>
+<p>This script is standalone, like the other three in this set — not sourced into <code>doing-being-science.qmd</code>. A typical setup chunk:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"psych-battery-dgp.R"</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"error-rates-process-control.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="parameter-quick-reference" class="level3">
+<h3 class="anchored" data-anchor-id="parameter-quick-reference">Parameter quick reference</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Parameter</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>evaluate_art3_rule()</code> / <code>sweep_art3_rule()</code> / <code>plot_art3_roc()</code></td>
+<td><code>k</code> / <code>k_grid</code></td>
+<td>—</td>
+<td>Classification threshold(s): “frequent reader” if <code>hits &gt;= k</code>.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>n</code></td>
+<td>—</td>
+<td>Participants per single application of the rule.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>reps</code></td>
+<td><code>200</code></td>
+<td>Independent applications of the rule per threshold (sweep/plot only).</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>reliability</code></td>
+<td><code>NULL</code></td>
+<td>ART3’s reliability; <code>NULL</code> uses its Vermeiren-default value.</td>
+</tr>
+<tr class="odd">
+<td><code>run_reliability_sweep()</code> / <code>plot_reliability_heatmap()</code></td>
+<td><code>reliability_grid</code></td>
+<td>—</td>
+<td>Reliability values to sweep (applied to both tests equally).</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>true_corr_latent</code></td>
+<td><code>NULL</code></td>
+<td>The <em>true</em> (disattenuated) correlation held fixed; <code>NULL</code> backs it out from the pair’s Vermeiren-default observed correlation.</td>
+</tr>
+<tr class="odd">
+<td><code>plot_true_corr_heatmap()</code> / <code>plot_process_control_overview()</code></td>
+<td><code>true_corr_grid</code></td>
+<td><code>NULL</code> (overview) / — (heatmap)</td>
+<td>Observed-scale correlations to sweep; the overview’s <code>NULL</code> default uses <code>c(0, &lt;pair's Vermeiren-default r&gt;)</code>.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>reliability</code></td>
+<td><code>NULL</code></td>
+<td>Reliability applied to both tests; <code>NULL</code> uses <code>var_x</code>’s Vermeiren-default value.</td>
+</tr>
+<tr class="odd">
+<td><code>plot_reliability_heatmap()</code> / <code>plot_true_corr_heatmap()</code></td>
+<td><code>metric</code></td>
+<td><code>"power_or_type1"</code></td>
+<td>Which <code>summarize_sweep()</code> column to plot: <code>"power_or_type1"</code>, <code>"sign_consistency"</code>, or <code>"coverage"</code> (not <code>"type_m_ratio"</code> — see <code>plot_type_m_curve()</code>).</td>
+</tr>
+<tr class="even">
+<td><code>plot_type_m_curve()</code></td>
+<td><code>true_corr_grid</code></td>
+<td><code>NULL</code></td>
+<td>Observed-scale correlation(s) to compute the exaggeration ratio for; <code>NULL</code> uses the pair’s Vermeiren-default value only (unlike the other Part B functions, <strong>not</strong> <code>c(0, ...)</code> — <code>type_m_ratio</code> is <code>NA</code> under the null).</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>n_grid</code></td>
+<td>—</td>
+<td>Sample sizes to sweep.</td>
+</tr>
+<tr class="even">
+<td><em>(sweep-based functions)</em></td>
+<td><code>seed_base</code></td>
+<td><code>1234</code></td>
+<td>Base seed for deterministic per-cell seeding.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="common-errors" class="level3">
+<h3 class="anchored" data-anchor-id="common-errors">Common errors</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Message</th>
+<th>Likely cause</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>`n` must be a positive integer</code></td>
+<td><code>n &lt;= 0</code> passed to <code>simulate_art3_battery()</code>/<code>evaluate_art3_rule()</code>.</td>
+</tr>
+<tr class="even">
+<td><code>`k` must be between 0 and 60 (the number of author items in ART3)</code></td>
+<td><code>k</code> outside ART3’s valid range of recognizable authors.</td>
+</tr>
+<tr class="odd">
+<td><code>`reps` must be at least 1</code></td>
+<td><code>sweep_art3_rule()</code> called with <code>reps = 0</code>.</td>
+</tr>
+<tr class="even">
+<td><code>`metric` must be one of power_or_type1, sign_consistency, coverage</code></td>
+<td>A misspelled or unsupported <code>metric</code> passed to either heatmap function.</td>
+</tr>
+<tr class="odd">
+<td>Warning: <code>achieved reliability (...) differs from the requested target (...)</code></td>
+<td>A <code>reliability</code>/<code>reliability_grid</code> value pushed calibration outside tolerance — see <code>psych-battery-dgp.R</code>’s <code>calibrate_ability_general()</code>.</td>
+</tr>
+<tr class="even">
+<td>Warning: <code>Target observed correlation r = ... is not achievable at ...</code></td>
+<td><code>plot_true_corr_heatmap()</code>’s <code>true_corr_grid</code> includes a value too large for the <code>reliability</code> in effect; <strong>this is the exact warning <code>run_reliability_sweep()</code> was built to avoid</strong> when sweeping reliability itself (see the callout above).</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="exercises" class="level2">
+<h2 class="anchored" data-anchor-id="exercises">Exercises</h2>
+<ol type="1">
+<li>Call <code>evaluate_art3_rule(n = 300, k = 40, seed = s)</code> for <code>s</code> in <code>1:10</code>. How much does <code>fpr</code> vary across the ten single applications? Compare that spread to the tight red trajectory in <code>plot_art3_roc()</code>’s <code>k = 40</code> point, built from 200 applications rather than one.</li>
+<li>Lower ART3’s <code>reliability</code> to <code>0.5</code> in <code>plot_art3_roc()</code> (via the <code>reliability</code> argument) and compare the resulting curve to the default (<code>reliability = .9</code>) version above. Does the trade-off get better or worse, and does that match what you’d predict from more measurement error?</li>
+<li>Run <code>plot_reliability_heatmap()</code> for StuVoc1-ART3 (a weaker pair, r ≈ .52) instead of StuVoc1-GK. At <code>n = 100</code>, how much more does power suffer from the same reliability drop, compared to the StuVoc1-GK heatmap above?</li>
+<li>Request <code>plot_true_corr_heatmap("StuVoc1", "GK", n_grid = c(50, 200), true_corr_grid = c(0.67), reliability = 0.2)</code> — deliberately low reliability with a high requested observed correlation. Confirm you get the “not achievable” warning from the Common Errors table, and explain in your own words why <code>plot_reliability_heatmap()</code>’s <code>run_reliability_sweep()</code> approach doesn’t have the same problem.</li>
+<li>Pick a <code>metric</code> other than the default (<code>"sign_consistency"</code> or <code>"coverage"</code>) for <code>plot_process_control_overview()</code>’s underlying <code>run_sweep()</code> call (via <code>summarize_sweep()</code>’s output directly, since <code>plot_process_control_overview()</code> always shows all three). Which of the three looks most stable across <code>n</code>, and which looks most sensitive to it?</li>
+<li>Re-run <code>plot_type_m_curve("StuVoc1", "StuVoc2", ...)</code> (r ≈ .82, a much stronger effect than the true correlation of .2 used above) across the same <code>n_grid = c(10, 15, 20, 30, 50, 100, 200)</code>. How much smaller is the exaggeration ratio at <code>n = 10</code>, and does it still fall toward 1 by <code>n = 200</code>, or has it already arrived there well before that?</li>
+</ol>
+</section>
+<section id="see-also" class="level2">
+<h2 class="anchored" data-anchor-id="see-also">See also</h2>
+<ul>
+<li><a href="psych-battery-dgp-walkthrough.qmd">psych-battery-dgp-walkthrough.qmd</a> — the shared simulation/sweep engine (<code>run_sweep()</code>, <code>summarize_sweep()</code>, <code>disattenuate()</code>) this script’s Part B builds on directly.</li>
+<li><a href="sampling-measurement-error-walkthrough.qmd">sampling-measurement-error-walkthrough.qmd</a> — <code>simulate_attenuation_sweep()</code>’s latent-vs-observed correlation device, reused (and the bug it would have prevented, explained) in <code>run_reliability_sweep()</code> above.</li>
+<li><a href="nhst-power-walkthrough.qmd">nhst-power-walkthrough.qmd</a> — the single-study and power-curve framing this script’s Part B reframes as long-run process-control error rates rather than individual-study outcomes.</li>
+</ul>
+</section>
+<section id="references" class="level2 unnumbered">
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-gelman2014" class="csl-entry" role="listitem">
+Gelman, Andrew, and John Carlin. 2014. <span>“Beyond Power Calculations.”</span> <em>Perspectives on Psychological Science</em> 9 (6): 641–51. <a href="https://doi.org/10.1177/1745691614551642">https://doi.org/10.1177/1745691614551642</a>.
+</div>
+<div id="ref-neyman1933" class="csl-entry" role="listitem">
+Neyman, Jerzy, and Egon S. Pearson. 1933. <span>“On the Problem of the Most Efficient Tests of Statistical Hypotheses.”</span> <em>Philosophical Transactions of the Royal Society of London. Series A, Containing Papers of a Mathematical or Physical Character</em> 231 (694–706): 289–337. <a href="https://doi.org/10.1098/rsta.1933.0009">https://doi.org/10.1098/rsta.1933.0009</a>.
+</div>
+<div id="ref-perezgonzalez2015" class="csl-entry" role="listitem">
+Perezgonzalez, Jose D. 2015. <span>“Fisher, <span>Neyman-Pearson</span> or <span>NHST</span>? <span>A</span> Tutorial for Teaching Data Testing.”</span> <em>Frontiers in Psychology</em> 6: 223. <a href="https://doi.org/10.3389/fpsyg.2015.00223">https://doi.org/10.3389/fpsyg.2015.00223</a>.
+</div>
+<div id="ref-vermeiren2023" class="csl-entry" role="listitem">
+Vermeiren, Hanke, Aaron Vandendaele, and Marc Brysbaert. 2023. <span>“Validated Tests for Language Research with University Students Whose Native Language Is <span>English</span>: <span>Tests</span> of Vocabulary, General Knowledge, Author Recognition, and Reading Comprehension.”</span> <em>Behavior Research Methods</em> 55: 1036–68. <a href="https://doi.org/10.3758/s13428-022-01856-x">https://doi.org/10.3758/s13428-022-01856-x</a>.
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

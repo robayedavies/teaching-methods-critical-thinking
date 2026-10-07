@@ -1,0 +1,2206 @@
+---
+title: "Effect size variation for the HLVA main effect, the PCREFp main effect, and their interaction"
+subtitle: "Aims 1-2: power, error rates, and replication rates (accuracy outcome)"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+    embed-resources: true
+    code-fold: true
+execute:
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## Scope of this document
+
+This document covers **Aim 1** (effect size x sample size, with a fuller
+statistical-error taxonomy) and **Aim 2** (discovery/replication split) of
+the Phase 2 parametric simulation program, for the `response` (comprehension
+accuracy) outcome only. It is a restructured development version of
+`synthetic-data-analyses-power-error-replication-aims-1-2-draft.qmd` (which
+is left unchanged as the reference/working copy), reframed around this
+project's actual, broader purpose: **mapping how power, the full Type
+I/II/S/M error taxonomy, and discovery/replication rates vary with effect
+size and sample size, for all three effects this project cares about**
+(the `zHLVA` participant-level main effect, the `zPCREFp` text-level main
+effect, and their interaction) -- not only the specific sign-instability
+question that originally motivated the design (see below). Aims 3-6 and the
+normative-F1-ANOVA-malpractice extension will get their own documents
+later, built the same way.
+
+All tables and figures below are computed from pre-existing, already-run
+results saved in `results_phase2/aim1_*.rds` and `results_phase2/aim2_*.rds`
+(no full-grid recomputation happens when this document is rendered). Full
+design rationale, the complete six-aim plan, and every aim's development
+history live untouched in `phase2-effect-variance-misspecification-PLAN.qmd`
+and `phase2-effect-variance-misspecification.qmd` -- this document condenses
+and refines the Aim 1/2 material from those sources rather than re-deriving
+it. The DGP/fitting code below is kept live (not just for reference) because
+it may be revisited for informative modifications in a follow-up pass; see
+the closing note.
+:::
+
+::: {.callout-important}
+## Terminology check: Type I vs. Type II
+
+Throughout this document, **Type I error** = a false positive (rejecting a
+true null -- concluding an effect exists when it does not), and **Type II
+error** = a false negative (failing to reject a false null -- missing a
+real effect). This is the standard convention, and matches how the rest of
+this document already uses "false-positive rate" (e.g. the `n_t = 2`
+`zPCREFp` discussion below). If a different convention was intended when
+this restructuring was requested, flag it and the language below can be
+adjusted.
+:::
+
+```{r}
+#| label: setup
+
+library(tidyverse)
+library(lme4)
+library(patchwork)
+library(RColorBrewer)
+library(ggdist)
+```
+
+## Relationship to Phase 1 and motivating framework
+
+Phase 1 (`sampling-variability-corridor-of-stability.qmd`) was an
+**empirical resampling** study of this project's one real dataset,
+answering "how unstable is our *actual* estimate at smaller *N*?" Phase 2 is
+a **parametric simulation** study, answering the complementary question:
+"how unstable would an estimate be across a *range* of plausible true
+effects, variances, and model specifications -- are Phase 1's findings a
+generic property of this kind of crossed design, or specific to this
+project's particular dataset?"
+
+Aims 1-2 port Marek et al.'s (2022) brain-wide-association-study
+reproducibility framework onto this setting. Marek et al. documented a
+statistical-error taxonomy -- false negatives, false positives,
+**magnitude/inflation error (Type M)**, and **sign error (Type S)** -- each
+as a function of sample size, and showed that smaller samples' significant
+effects are disproportionately the most inflated and sign-flipped ones (the
+"underpowered paradox": stricter significance thresholds select for, rather
+than screen out, the most inflated estimates). They also used an explicit
+**discovery/replication split** design to quantify out-of-sample replication
+probability directly. Aims 1-2 were originally motivated by testing whether
+this project's own documented sign-instability (the "reverse cohesion
+effect" finding -- see project memory) is a domain-specific instance of the
+same generic phenomenon; the design covers **three effects** rather than
+the interaction alone (the `zHLVA` main effect, the `zPCREFp` main effect,
+and their `zHLVA:zPCREFp` interaction) precisely so that question could be
+answered by comparison.
+
+That motivating question, however, is narrower than what this document is
+actually useful for. Once all three effects are run through the same
+effect-size x sample-size grid with the same diagnostic taxonomy, the
+results answer a more general question that different readers will care
+about differently:
+
+- A reader planning a **new study** mainly wants **power** and **discovery
+  rate**: how large a sample, on which margin, is needed to reliably detect
+  a given effect?
+- A reader trying to **interpret an existing significant finding** (their
+  own or someone else's) mainly wants **Type S (sign) error rate** and
+  **Type M (magnitude) ratio**: conditional on a result being "significant,"
+  how likely is it to have the wrong sign, or to be substantially inflated?
+- A reader thinking about **meta-scientific reproducibility** mainly wants
+  the **discovery/replication rates** from Aim 2: if this study were run
+  twice independently, how often would both runs agree?
+
+All three questions are answered for all three effects below; the original
+sign-instability question is one specific instance of the first two,
+revisited explicitly in "Aim 1: is small-text-*N* instability a
+text-margin property or an interaction-specific property?" below.
+
+The table below defines each diagnostic used throughout this document and
+states exactly how it is computed here. All are derived from
+`diagnose_coefs_p2()`'s per-replicate-fit columns (`estimate`, `std.error`,
+`true_value`, and the **Wald** 95% CI `estimate +/- 1.96 * std.error`), then
+aggregated by `summarize_p2_metrics()` / the `aim1-full-metrics-table`
+chunk over whichever grouping is in play (typically `term` x `n_t`, pooled
+over `n_p` and the 50 replicates/cell).
+
+| Diagnostic | Standard definition | Computed here as |
+|---|---|---|
+| `power` | P(reject H0 \| true effect is non-zero) -- probability of correctly detecting a real effect. | `mean(excludes_zero)`, restricted to rows at the term's non-zero (typically empirically-observed) effect size. `excludes_zero` = the 95% Wald CI does not contain 0. |
+| `type_1_rate` | P(reject H0 \| true effect is exactly zero) -- the false-positive rate; nominally ~0.05 for a correctly calibrated 95% CI. | `mean(excludes_zero)`, restricted to rows at `effect_value == 0` on the same sweep. |
+| `sign_reliability` | P(estimated sign matches true sign), unconditional on significance. | `mean(correct_sign)` over **all** fits (significant or not), where `correct_sign = sign(estimate) == sign(true_value)`. |
+| `type_s_rate` | Type S (sign) error rate: P(estimated sign is wrong \| the result is significant) -- Gelman & Carlin's (2014)/Marek et al.'s (2022) usage. | `mean(sign_error[excludes_zero])`, i.e. computed only among rows where the CI excludes zero; `sign_error = excludes_zero & !correct_sign`. |
+| `type_m_ratio` | Type M (magnitude/inflation) ratio: how much larger a *significant* estimate typically is than the true effect. | `median(inflation_ratio[excludes_zero])`, where `inflation_ratio = abs(estimate) / abs(true_value)` (undefined/`NA` when `true_value == 0`, since inflation relative to zero is not meaningful); the median (not mean) is used to resist the heavy right skew of this ratio at small `n_t`. |
+| `median_bias` | Bias: the typical signed deviation of the estimate from the true value. | `median(bias)` over all fits, where `bias = estimate - true_value`. Median rather than mean, again for robustness to the occasional extreme estimate at small `n_t`. |
+| `coverage` | Nominal 95% CI coverage: the proportion of CIs that actually contain the true value (should be ~0.95 if well-calibrated). | `mean(covers_truth)`, where `covers_truth = ci_lower <= true_value & true_value <= ci_upper`. |
+| `rmse_raw` | Root-mean-squared error of the estimate around the true value. | `sqrt(mean(bias^2))` over all fits. Included for completeness but dominated by rare pathological fits at `n_t = 2` (see prose below the fuller metrics table). |
+| `rmse_trimmed` | RMSE, robustified against extreme outliers. | `sqrt(mean(pmin(bias^2, quantile(bias^2, 0.95))))` -- squared bias is winsorized at its own 95th percentile (within each group) before averaging, so a handful of extreme singular-fit estimates cannot dominate the summary. Preferred over `rmse_raw` for cross-cell comparison. |
+
+Two things to note about this taxonomy as implemented: first, `type_s_rate`
+and `type_m_ratio` are both computed *conditional on significance*
+(`excludes_zero`), matching Marek et al.'s (2022) framing of "what does a
+significant result look like at this sample size" -- they are not defined,
+and are `NA`, for the (usually large) share of non-significant fits.
+Second, all coverage/CI-based diagnostics here use **Wald** intervals
+(`estimate +/- 1.96 * std.error`) rather than profile-likelihood or
+bootstrap CIs, for computational speed across tens of thousands of `glmer`
+fits -- this is a possible source of miscalibration in its own right,
+distinct from the random-effects-identifiability mechanism discussed later
+in this document, and is not separately investigated here.
+
+| Input | Value(s) | Source |
+|---|---|---|
+| Sample-size grid (participants) | 25, 100, 375, 725, 1300, 1497 | Phase 1 Step 3's joint grid |
+| Sample-size grid (texts) | 2, 10, 35, 85, 136 | Phase 1 Step 3's joint grid |
+| Effect size, `zHLVA` | 0.363 | Phase 1 Step 0 full-data fit |
+| Effect size, `zPCREFp` | 0.094-0.098 | Phase 1 Step 0 / Step 5 |
+| Effect size, `zHLVA:zPCREFp` | 0.054 | Phase 1 Step 0 / Step 5 (glmer and brms agree) |
+| Variance component, `sd(ResponseId)` | 0.69 | Full core model (`dev.all.studies.noratings.ptqs.normal.0.1.normal.0.1.lkj.2.study.ri.rds`), extracted in `phase2-effect-variance-misspecification.qmd`'s `extract-aim5-reference` chunk -- differs from Phase 1's simpler reduced-model estimate (~0.61-0.62) because the full model's 26 fixed effects absorb some of that between-participant variance |
+| Variance component, `sd(text.id)` | 0.41 | Same source as above -- differs from Phase 1's reduced-model estimate (~0.70-0.72), same reason |
+| RE-misspecification contrast | "correct" `(1\|ResponseId)+(1\|text.id)` vs. "misspecified" `(1\|ResponseId)` only | Phase 1, all steps |
+
+Reusing the same sample-size grid means these results can be laid
+side-by-side against Phase 1's real-data panels directly.
+
+::: {.callout-important}
+## Note: the real core model's random-effects structure is richer than this DGP
+
+The real fitted core model's random-effects terms let participants vary in
+their *slopes* for all five text-level predictors (including `zPCREFp`), and
+let texts vary in their *slopes* for the participant-level predictors
+(including `zHLVA`), each correlated with its own grouping factor's
+intercept. Aims 1-2 (like Aim 3-4 and 6) use a simpler, random-**intercept**-
+only "correct"/"misspecified" data-generating process, following Phase 1's
+reduced model -- they answer a coarser question (omitting a grouping
+factor's clustering altogether) and should not be read as testing the real
+model's richer slope/covariance structure. That richer structure is the
+subject of Aim 5, covered in a separate future document.
+:::
+
+## Design: Aim 1 (effect size x sample size) and Aim 2 (discovery/replication split)
+
+Both aims share one data-generating run: RE specification fixed at
+"correct" (random intercepts only, for `ResponseId`/`participant_id` and
+`text.id`/`text_id`); variance components fixed at their empirical values;
+the full joint sample-size grid (30 `(n_p, n_t)` cells); 50 replicates/cell.
+A grid cell's `(n_p, n_t)` is the **total** sample -- Aim 2 splits each cell
+into two roughly-equal-sized discovery/replication halves.
+
+**Aim 1** runs three **one-at-a-time** effect-size sweeps -- each holding
+the other two effects fixed at their empirical values while varying the
+swept effect:
+
+| Sweep | Effect | Grid (centered on empirical estimate) |
+|---|---|---|
+| (i) | `zHLVA` (main effect, participant-level) | 0, 0.18, 0.363 (observed), 0.7, 1.0 |
+| (ii) | `zPCREFp` (main effect, text-level) | 0, 0.05, ~0.095 (observed), 0.2, 0.35 |
+| (iii) | `zHLVA:zPCREFp` (interaction) | 0, 0.025, 0.054 (observed), 0.10, 0.20 |
+
+Diagnostics extend the project's existing four (bias, sign reliability,
+coverage, RMSE) with a Marek-style decomposition, directly computable here
+because the true value is known exactly: **Type S (sign) error rate** (among
+CI-excludes-0 draws, proportion with the wrong sign), **Type M
+(magnitude/inflation) ratio** (`|estimate|/|true value|` among
+CI-excludes-0 draws), and **power** on its own scale.
+
+**The original motivating question Aim 1 answers** (one specific instance
+of its general purpose): is the sign-instability pattern found in Phase 1
+(near-coin-flip sign consistency for the interaction at *n* = 2 texts) (a) a
+property of the *specific* small effect size observed, (b) specific to the
+interaction term, or (c) a general property of being estimated from the
+*text* margin (in which case `zPCREFp`, also text-level, should show a
+similar pattern)? Comparing all three effects on the same diagnostics
+distinguishes these explanations directly. But the same grid and diagnostics
+also answer the broader questions above (power/discovery for study
+planning, Type S/M for interpreting an existing result) for **any** of the
+three effects, independent of that original motivating question -- readers
+who don't care about the reverse-cohesion-effect history can use the tables
+and figures below directly for whichever effect and diagnostic interests
+them.
+
+**Aim 2** ports Marek et al.'s replication design (their Fig. 3e): for each
+grid cell (all three effects), split the simulated sample into two
+independent, equal-sized discovery/replication halves, fit both, and compute
+the proportion of replicates in which a discovery-significant effect also
+replicates (same sign, both significant) out-of-sample. The split axis is
+configurable (`split_margin`): `"participants_only"` (same text pool in both
+halves, new participants only) vs. `"both"` (independent participants *and*
+texts). Both variants can be compared once built; the run below uses
+`"participants_only"`.
+
+The significance-threshold/multiple-comparisons sweep (Marek's
+P<0.05-to-Bonferroni comparison) is explicitly **deferred** here -- see
+"Flagged future work" below.
+
+## Shared data-generating function
+
+Generalizes `simulate_interaction_data()` (from
+`power-simulation-vocabulary-cohesion.qmd`) and `generate_data_s3()` (from
+`simulation_study_complete.qmd`): crossed participant x text design with
+`k`-texts-per-participant subsetting (clamped to `n_texts`), independently
+settable effect sizes for all three effects, independently settable
+intercept variances for both margins, and optional by-margin slope
+variance/correlation (zero by default here, so Aims 1-2 reduce to the
+intercept-only DGP; non-zero values are used only by Aim 5, covered
+elsewhere).
+
+```{r}
+#| label: generate-data-p2
+
+generate_data_p2 <- function(
+    n_participants = 200,
+    n_texts        = 20,
+    k              = min(10, n_texts),
+    questions_per_text = 4,
+    b_intercept    = 2.093,
+    b_hlva         = 0.363,
+    b_pcref        = 0.095,
+    b_interaction  = 0.054,
+    sd_participant = 0.69,
+    sd_text        = 0.41,
+    sd_pcref_slope = 0,
+    sd_hlva_slope  = 0,
+    cor_part       = 0,
+    cor_text       = 0,
+    cohesion_design = c("natural", "widened"),
+    reliability_hlva = 1,
+    reliability_pcref = 1,
+    seed           = NULL
+) {
+  cohesion_design <- match.arg(cohesion_design)
+  if (!is.null(seed)) set.seed(seed)
+  k <- min(k, n_texts)
+
+  # Participant-level random effects: intercept + zPCREFp slope (correlated) -- Aim 5
+  Sigma_part <- matrix(
+    c(sd_participant^2, cor_part * sd_participant * sd_pcref_slope,
+      cor_part * sd_participant * sd_pcref_slope, sd_pcref_slope^2),
+    nrow = 2
+  )
+  re_part <- if (sd_pcref_slope > 0) {
+    MASS::mvrnorm(n_participants, mu = c(0, 0), Sigma = Sigma_part)
+  } else {
+    cbind(rnorm(n_participants, 0, sd_participant), 0)
+  }
+
+  # zHLVA measurement reliability -- Aim 6 strategy E; reliability_hlva = 1
+  # (default) reproduces the exact prior behavior used in Aims 1-5.
+  zHLVA_true <- rnorm(n_participants, 0, 1)
+  zHLVA_obs  <- sqrt(reliability_hlva) * zHLVA_true +
+    sqrt(1 - reliability_hlva) * rnorm(n_participants, 0, 1)
+
+  participants <- tibble(
+    participant_id = 1:n_participants,
+    zHLVA          = zHLVA_true,
+    zHLVA_obs      = zHLVA_obs,
+    u_participant  = re_part[, 1],
+    s_pcref        = re_part[, 2]
+  )
+
+  # Text-level random effects: intercept + zHLVA slope (correlated) -- Aim 5
+  Sigma_text <- matrix(
+    c(sd_text^2, cor_text * sd_text * sd_hlva_slope,
+      cor_text * sd_text * sd_hlva_slope, sd_hlva_slope^2),
+    nrow = 2
+  )
+  re_text <- if (sd_hlva_slope > 0) {
+    MASS::mvrnorm(n_texts, mu = c(0, 0), Sigma = Sigma_text)
+  } else {
+    cbind(rnorm(n_texts, 0, sd_text), 0)
+  }
+
+  # zPCREFp sampling design -- Aim 6 strategy D (widened cohesion range) --
+  # and measurement reliability -- Aim 6 strategy E.
+  zPCREFp_true <- if (cohesion_design == "widened") {
+    rep(c(-1.5, 1.5), length.out = n_texts) + rnorm(n_texts, 0, 0.3)
+  } else {
+    rnorm(n_texts, 0, 1)
+  }
+  zPCREFp_obs <- sqrt(reliability_pcref) * zPCREFp_true +
+    sqrt(1 - reliability_pcref) * rnorm(n_texts, 0, 1)
+
+  texts <- tibble(
+    text_id  = 1:n_texts,
+    zPCREFp  = zPCREFp_true,
+    zPCREFp_obs = zPCREFp_obs,
+    u_text   = re_text[, 1],
+    s_hlva   = re_text[, 2]
+  )
+
+  assignments <- tibble(participant_id = 1:n_participants) |>
+    dplyr::mutate(assigned = purrr::map(participant_id,
+                          ~ sample(1:n_texts, size = k, replace = FALSE))) |>
+    tidyr::unnest(assigned) |>
+    dplyr::rename(text_id = assigned)
+
+  assignments |>
+    dplyr::left_join(participants, by = "participant_id") |>
+    dplyr::left_join(texts,        by = "text_id") |>
+    dplyr::slice(rep(1:dplyr::n(), each = questions_per_text)) |>
+    dplyr::mutate(
+      question_id = rep(1:questions_per_text, times = dplyr::n() / questions_per_text),
+      eta = b_intercept +
+        (b_hlva  + s_hlva)  * zHLVA +
+        (b_pcref + s_pcref) * zPCREFp +
+        b_interaction * zHLVA * zPCREFp +
+        u_participant + u_text,
+      prob     = plogis(eta),
+      response = rbinom(dplyr::n(), 1, prob)
+    ) |>
+    dplyr::mutate(zHLVA_fit = zHLVA_obs, zPCREFp_fit = zPCREFp_obs) |>
+    dplyr::select(participant_id, text_id, question_id,
+                  zHLVA = zHLVA_fit, zPCREFp = zPCREFp_fit, response)
+}
+```
+
+Note: `library(MASS)` is deliberately **not** attached (only `MASS::mvrnorm`
+is called via `::`), because `MASS::select()` masks `dplyr::select()` and
+breaks the pipeline above if attached. The fitted model always sees
+`zHLVA`/`zPCREFp` as **observed** (possibly measurement-error-attenuated)
+values, while the response is generated from the **true** latent values --
+with the default `reliability_hlva = reliability_pcref = 1` used throughout
+Aims 1-2, observed and true are identical.
+
+## Shared fitting and outcome-classification helpers
+
+Reused from `sampling-variability-corridor-of-stability.qmd`'s
+`fit_reduced_model()` / `extract_terms_of_interest()` /
+`fit_reduced_model_guarded()` pattern, extended with a third RE
+specification (`"full_slopes"`, used only by Aim 5) alongside the
+`"correct"`/`"misspecified"` pair used here and by Aim 3.
+
+```{r}
+#| label: fit-model-p2
+
+extract_terms_of_interest_p2 <- function(fit) {
+  terms <- c("zHLVA", "zPCREFp", "zHLVA:zPCREFp")
+  co <- tryCatch(summary(fit)$coefficients, error = function(e) NULL)
+  if (is.null(co)) return(NULL)
+  avail <- intersect(terms, rownames(co))
+  tibble(term = avail, estimate = co[avail, "Estimate"], std.error = co[avail, "Std. Error"])
+}
+
+fit_model_p2 <- function(data, re_spec = c("correct", "misspecified", "full_slopes")) {
+  re_spec <- match.arg(re_spec)
+  form <- switch(re_spec,
+    correct      = response ~ zHLVA * zPCREFp + (1 | participant_id) + (1 | text_id),
+    misspecified = response ~ zHLVA * zPCREFp + (1 | participant_id),
+    full_slopes  = response ~ zHLVA * zPCREFp + (1 + zPCREFp | participant_id) + (1 + zHLVA | text_id)
+  )
+  warn_msgs <- character(0)
+  fit <- tryCatch(
+    withCallingHandlers(
+      glmer(form, data = data, family = binomial, control = glmerControl(optimizer = "bobyqa")),
+      warning = function(w) { warn_msgs <<- c(warn_msgs, conditionMessage(w)); invokeRestart("muffleWarning") }
+    ),
+    error = function(e) e
+  )
+  if (inherits(fit, "error")) return(list(status = "error", coefs = NULL))
+  status <- if (length(warn_msgs) > 0 &&
+                any(grepl("failed to converge|Model failed|large eigenvalue|unable to evaluate",
+                          warn_msgs, ignore.case = TRUE))) {
+    "optimizer_warning"
+  } else if (isSingular(fit)) {
+    "converged_singular"
+  } else {
+    "converged_clean"
+  }
+  list(status = status, coefs = extract_terms_of_interest_p2(fit))
+}
+
+fit_model_p2_guarded <- function(data, re_spec, timeout_secs = 15) {
+  setTimeLimit(elapsed = timeout_secs, transient = TRUE)
+  res <- tryCatch(
+    fit_model_p2(data, re_spec),
+    error = function(e) list(status = "error", coefs = NULL)
+  )
+  setTimeLimit(elapsed = Inf, transient = FALSE)
+  res
+}
+```
+
+## Sample-size grid and Aim 1 sweep grids
+
+```{r}
+#| label: sample-size-grid
+
+n_p_grid <- c(25, 100, 375, 725, 1300, 1497)
+n_t_grid <- c(2, 10, 35, 85, 136)
+joint_grid <- tidyr::expand_grid(n_p = n_p_grid, n_t = n_t_grid)
+nrow(joint_grid)
+```
+
+```{r}
+#| label: aim1-sweep-grids
+
+b_hlva_grid        <- c(0, 0.18, 0.363, 0.7, 1.0)
+b_pcref_grid       <- c(0, 0.05, 0.095, 0.2, 0.35)
+b_interaction_grid <- c(0, 0.025, 0.054, 0.10, 0.20)
+```
+
+## Discovery/replication data-generating pair (Aim 2)
+
+For `split_margin = "participants_only"`, both halves share the same
+`n_t_total` texts (avoiding degenerate 1-text halves at the smallest grid
+point, `n_t = 2`); only the participant pool is split. For `split_margin =
+"both"`, both margins split independently.
+
+```{r}
+#| label: generate-data-p2-pair
+
+generate_data_p2_pair <- function(
+    n_p_total, n_t_total, k = min(10, n_t_total), questions_per_text = 4,
+    b_intercept = 2.093, b_hlva = 0.363, b_pcref = 0.095, b_interaction = 0.054,
+    sd_participant = 0.69, sd_text = 0.41,
+    sd_pcref_slope = 0, sd_hlva_slope = 0, cor_part = 0, cor_text = 0,
+    split_margin = c("participants_only", "both"),
+    seed
+) {
+  split_margin <- match.arg(split_margin)
+  set.seed(seed)
+
+  n_p_half <- max(1, floor(n_p_total / 2))
+  n_t_half <- if (split_margin == "both") max(1, floor(n_t_total / 2)) else n_t_total
+
+  make_texts <- function(n_t) {
+    Sigma_text <- matrix(c(sd_text^2, cor_text * sd_text * sd_hlva_slope,
+                            cor_text * sd_text * sd_hlva_slope, sd_hlva_slope^2), nrow = 2)
+    re_text <- if (sd_hlva_slope > 0) MASS::mvrnorm(n_t, c(0, 0), Sigma_text) else cbind(rnorm(n_t, 0, sd_text), 0)
+    tibble(text_id = 1:n_t, zPCREFp = rnorm(n_t, 0, 1), u_text = re_text[, 1], s_hlva = re_text[, 2])
+  }
+  make_participants <- function(n_p) {
+    Sigma_part <- matrix(c(sd_participant^2, cor_part * sd_participant * sd_pcref_slope,
+                            cor_part * sd_participant * sd_pcref_slope, sd_pcref_slope^2), nrow = 2)
+    re_part <- if (sd_pcref_slope > 0) MASS::mvrnorm(n_p, c(0, 0), Sigma_part) else cbind(rnorm(n_p, 0, sd_participant), 0)
+    tibble(participant_id = 1:n_p, zHLVA = rnorm(n_p, 0, 1), u_participant = re_part[, 1], s_pcref = re_part[, 2])
+  }
+  build_dataset <- function(participants, texts) {
+    kk <- min(k, nrow(texts))
+    assignments <- tibble(participant_id = participants$participant_id) |>
+      dplyr::mutate(assigned = purrr::map(participant_id, ~ sample(texts$text_id, size = kk, replace = FALSE))) |>
+      tidyr::unnest(assigned) |> dplyr::rename(text_id = assigned)
+    assignments |>
+      dplyr::left_join(participants, by = "participant_id") |>
+      dplyr::left_join(texts, by = "text_id") |>
+      dplyr::slice(rep(1:dplyr::n(), each = questions_per_text)) |>
+      dplyr::mutate(
+        question_id = rep(1:questions_per_text, times = dplyr::n() / questions_per_text),
+        eta = b_intercept + (b_hlva + s_hlva) * zHLVA + (b_pcref + s_pcref) * zPCREFp +
+          b_interaction * zHLVA * zPCREFp + u_participant + u_text,
+        prob = plogis(eta), response = rbinom(dplyr::n(), 1, prob)
+      ) |>
+      dplyr::select(participant_id, text_id, question_id, zHLVA, zPCREFp, response)
+  }
+
+  texts_shared      <- make_texts(n_t_half)
+  participants_disc <- make_participants(n_p_half)
+  participants_repl <- make_participants(n_p_half)
+  texts_repl        <- if (split_margin == "both") make_texts(n_t_half) else texts_shared
+
+  list(
+    discovery   = build_dataset(participants_disc, texts_shared),
+    replication = build_dataset(participants_repl, texts_repl)
+  )
+}
+```
+
+## Diagnostics and combined per-cell runner
+
+Coverage/CI-width/Type S/Type M diagnostics use **Wald confidence intervals**
+(`estimate +/- 1.96 * std.error`) rather than profile-likelihood CIs, for
+speed -- consistent with the project's `glmer`-as-fast-workhorse convention.
+
+```{r}
+#| label: aim1-aim2-diagnostics-and-runner
+
+diagnose_coefs_p2 <- function(coefs, true_vals) {
+  coefs |>
+    dplyr::mutate(
+      true_value      = true_vals[term],
+      ci_lower        = estimate - 1.96 * std.error,
+      ci_upper        = estimate + 1.96 * std.error,
+      ci_width        = ci_upper - ci_lower,
+      excludes_zero   = ci_lower > 0 | ci_upper < 0,
+      correct_sign    = sign(estimate) == sign(true_value),
+      sign_error      = excludes_zero & !correct_sign,
+      inflation_ratio = ifelse(true_value != 0, abs(estimate) / abs(true_value), NA_real_),
+      bias            = estimate - true_value,
+      covers_truth    = ci_lower <= true_value & true_value <= ci_upper
+    )
+}
+
+combine_replication_p2 <- function(res_disc, res_repl, true_vals) {
+  if (is.null(res_disc$coefs) || is.null(res_repl$coefs)) {
+    return(tibble(term = names(true_vals), replicated = NA, discovery_significant = NA))
+  }
+  disc <- diagnose_coefs_p2(res_disc$coefs, true_vals) |>
+    dplyr::select(term, estimate, excludes_zero)
+  repl <- diagnose_coefs_p2(res_repl$coefs, true_vals) |>
+    dplyr::select(term, estimate_repl = estimate, excludes_zero_repl = excludes_zero)
+  dplyr::full_join(disc, repl, by = "term") |>
+    dplyr::mutate(
+      discovery_significant = excludes_zero,
+      replicated = excludes_zero & excludes_zero_repl & sign(estimate) == sign(estimate_repl)
+    )
+}
+
+run_aim1_aim2_cell <- function(sweep, effect_value, n_p, n_t, rep, split_margin = "participants_only") {
+  b_hlva        <- if (sweep == "hlva")        effect_value else 0.363
+  b_pcref       <- if (sweep == "pcref")       effect_value else 0.095
+  b_interaction <- if (sweep == "interaction") effect_value else 0.054
+  true_vals <- c(zHLVA = b_hlva, zPCREFp = b_pcref, `zHLVA:zPCREFp` = b_interaction)
+
+  sweep_idx <- match(sweep, c("hlva", "pcref", "interaction"))
+  seed_base <- rep * 1e7 + n_p * 1e3 + n_t + sweep_idx * 1e5 + round(effect_value * 1000)
+
+  ## Aim 1: single full-sample fit
+  df_full  <- generate_data_p2(n_participants = n_p, n_texts = n_t,
+                                b_hlva = b_hlva, b_pcref = b_pcref, b_interaction = b_interaction,
+                                seed = seed_base)
+  res_full <- fit_model_p2_guarded(df_full, "correct")
+
+  aim1_rows <- if (!is.null(res_full$coefs)) {
+    diagnose_coefs_p2(res_full$coefs, true_vals) |> dplyr::mutate(status = res_full$status)
+  } else {
+    tibble(term = names(true_vals), status = res_full$status)
+  }
+  aim1_rows <- aim1_rows |>
+    dplyr::mutate(sweep = sweep, effect_value = effect_value, n_p = n_p, n_t = n_t, rep = rep)
+
+  ## Aim 2: discovery/replication split (same grid cell = total N)
+  pair <- generate_data_p2_pair(n_p_total = n_p, n_t_total = n_t,
+                                 b_hlva = b_hlva, b_pcref = b_pcref, b_interaction = b_interaction,
+                                 split_margin = split_margin, seed = seed_base + 1)
+  res_disc <- fit_model_p2_guarded(pair$discovery, "correct")
+  res_repl <- fit_model_p2_guarded(pair$replication, "correct")
+
+  aim2_rows <- combine_replication_p2(res_disc, res_repl, true_vals) |>
+    dplyr::mutate(
+      sweep = sweep, effect_value = effect_value, n_p = n_p, n_t = n_t, rep = rep,
+      split_margin = split_margin,
+      status_discovery = res_disc$status, status_replication = res_repl$status
+    )
+
+  list(aim1 = aim1_rows, aim2 = aim2_rows)
+}
+```
+
+The full grid (3 sweeps x 5 effect values x 30 cells x 50 replicates x 3
+fits/combination = 67,500 total `glmer` fits) was run once, as a detached
+background process, well before this document was written -- see the
+"Development history" appendix for the validation/timing/cost detail. It is
+**not** re-run here; the sections below load its saved output directly.
+
+## Loading Aim 1/2 results and shared helpers
+
+```{r}
+#| label: load-aim1-aim2-results
+
+aim1_files <- c("results_phase2/aim1_hlva.rds", "results_phase2/aim1_pcref.rds",
+                 "results_phase2/aim1_interaction.rds")
+aim2_files <- c("results_phase2/aim2_hlva.rds", "results_phase2/aim2_pcref.rds",
+                 "results_phase2/aim2_interaction.rds")
+missing_files <- c(aim1_files, aim2_files)[!file.exists(c(aim1_files, aim2_files))]
+if (length(missing_files) > 0) {
+  stop(
+    "Missing Aim 1/2 result file(s): ", paste(missing_files, collapse = ", "),
+    ". These are produced by the detached background job run_aim1_aim2_full.R ",
+    "(~5h on 4 workers) -- this document does not regenerate them inline. ",
+    "Run that script first if the files are genuinely absent."
+  )
+}
+
+aim1_hlva        <- readRDS("results_phase2/aim1_hlva.rds")
+aim1_pcref       <- readRDS("results_phase2/aim1_pcref.rds")
+aim1_interaction <- readRDS("results_phase2/aim1_interaction.rds")
+aim2_hlva        <- readRDS("results_phase2/aim2_hlva.rds")
+aim2_pcref       <- readRDS("results_phase2/aim2_pcref.rds")
+aim2_interaction <- readRDS("results_phase2/aim2_interaction.rds")
+
+own_effect <- c(zHLVA = 0.363, zPCREFp = 0.095, `zHLVA:zPCREFp` = 0.054)
+term_levels <- c("zHLVA", "zPCREFp", "zHLVA:zPCREFp")
+
+# Each sweep's own term, evaluated only at its empirically-observed effect
+# size -- the slice used by most tables/figures below.
+aim1_all <- dplyr::bind_rows(
+  aim1_hlva        |> dplyr::filter(term == "zHLVA",        effect_value == own_effect["zHLVA"]),
+  aim1_pcref       |> dplyr::filter(term == "zPCREFp",       effect_value == own_effect["zPCREFp"]),
+  aim1_interaction |> dplyr::filter(term == "zHLVA:zPCREFp", effect_value == own_effect["zHLVA:zPCREFp"])
+) |> dplyr::mutate(term = factor(term, levels = term_levels))
+
+aim2_all <- dplyr::bind_rows(
+  aim2_hlva        |> dplyr::filter(term == "zHLVA",        effect_value == own_effect["zHLVA"]),
+  aim2_pcref       |> dplyr::filter(term == "zPCREFp",       effect_value == own_effect["zPCREFp"]),
+  aim2_interaction |> dplyr::filter(term == "zHLVA:zPCREFp", effect_value == own_effect["zHLVA:zPCREFp"])
+) |> dplyr::mutate(term = factor(term, levels = term_levels))
+
+# Full effect-size sweep, all points (not just the own-effect-size slice) --
+# used for the Aim 1 power-curves figure below.
+aim1_sweep_combined <- dplyr::bind_rows(
+  aim1_hlva        |> dplyr::filter(term == "zHLVA"),
+  aim1_pcref       |> dplyr::filter(term == "zPCREFp"),
+  aim1_interaction |> dplyr::filter(term == "zHLVA:zPCREFp")
+) |> dplyr::mutate(term = factor(term, levels = term_levels))
+
+# Shared summary helper: power, sign reliability, Type S error rate,
+# Type M ratio, median bias, and coverage, grouped by whatever columns are
+# passed in `group_vars`.
+summarize_p2_metrics <- function(df, group_vars) {
+  df |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_vars))) |>
+    dplyr::summarise(
+      power            = mean(excludes_zero, na.rm = TRUE),
+      sign_reliability = mean(correct_sign, na.rm = TRUE),
+      type_s_rate      = mean(sign_error[excludes_zero], na.rm = TRUE),
+      type_m_ratio     = median(inflation_ratio[excludes_zero], na.rm = TRUE),
+      median_bias      = median(bias, na.rm = TRUE),
+      coverage         = mean(covers_truth, na.rm = TRUE),
+      n_fits           = dplyr::n(),
+      .groups = "drop"
+    )
+}
+
+aim1_metric_labels <- c(power = "Power\nP(significant)",
+                         sign_reliability = "Sign reliability\nP(correct sign)",
+                         type_s_rate = "Type S rate\nP(wrong sign | significant)",
+                         type_m_ratio = "Type M ratio\nmedian |est/true| | significant")
+
+aim2_metric_labels <- c(discovery_rate = "Discovery rate\nP(significant, half 1)",
+                         replication_rate = "Replication rate\nP(sig. + same sign, both halves)",
+                         conditional_replication = "Conditional replication\nP(replicates | discovery-sig.)")
+```
+
+## Shared plotting helpers
+
+Aim 1 and Aim 2 each need a metrics-vs-`n_t` line/facet plot and an
+`n_p`x`n_t` heatmap that differ only in which columns/labels are used. Both
+are written once here and reused for each aim below (and are intended to be
+reused again for the Aims 3-6 documents still to come).
+
+```{r}
+#| label: plot-helpers
+
+plot_metrics_vs_x <- function(data, x_var, metrics, metric_labels,
+                               color_var = "term", x_lab = NULL, x_breaks = n_t_grid) {
+  x_lab <- x_lab %||% x_var
+  df_long <- data |>
+    tidyr::pivot_longer(dplyr::all_of(metrics), names_to = "metric", values_to = "value") |>
+    dplyr::mutate(metric = factor(metric_labels[metric], levels = unname(metric_labels)))
+
+  ggplot(df_long, aes(x = .data[[x_var]], y = value, color = .data[[color_var]])) +
+    geom_line() +
+    geom_point() +
+    facet_wrap(~metric, scales = "free_y") +
+    scale_x_log10(breaks = x_breaks) +
+    scale_color_brewer(palette = "Dark2") +
+    labs(x = x_lab, y = NULL, color = "Term") +
+    theme_minimal()
+}
+
+plot_power_heatmap <- function(data, fill_var, facet_var = "term", fill_label = "Value",
+                                grid_n_p = n_p_grid, grid_n_t = n_t_grid,
+                                limits = c(0, 1), label_format = c("percent", "number"),
+                                digits = 2, diverging = FALSE, midpoint = 0, squish = FALSE) {
+  # Generalized from a power-only heatmap to any (n_p, n_t) diagnostic
+  # surface. Defaults (limits = c(0, 1), percent labels, no squishing)
+  # exactly reproduce the original power/replication-rate behavior, so
+  # existing calls below are unaffected. `label_format = "number"` and/or
+  # `diverging = TRUE` support diagnostics that aren't bounded proportions
+  # (Type M ratio, median bias, RMSE); `squish = TRUE` lets a handful of
+  # extreme outlier cells (common at n_t = 2) recolor to the scale's edge
+  # color rather than stretching the whole gradient to accommodate them --
+  # the text label still shows the real, uncapped value.
+  label_format <- match.arg(label_format)
+  label_fn <- if (label_format == "percent") {
+    function(x) scales::percent(x, accuracy = 1)
+  } else {
+    function(x) sprintf(paste0("%.", digits, "f"), x)
+  }
+  oob_fn <- if (squish) scales::squish else scales::censor
+
+  p <- ggplot(data, aes(x = factor(n_p, levels = grid_n_p), y = factor(n_t, levels = grid_n_t),
+                    fill = .data[[fill_var]])) +
+    geom_tile() +
+    geom_text(aes(label = label_fn(.data[[fill_var]])), size = 2.8,
+              color = if (diverging) "black" else "white") +
+    facet_wrap(stats::as.formula(paste0("~", facet_var))) +
+    labs(x = "Participant sample size (n_p)", y = "Text sample size (n_t)", fill = fill_label) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+  if (diverging) {
+    p + scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B",
+                              midpoint = midpoint, limits = limits, oob = oob_fn)
+  } else if (label_format == "percent") {
+    p + scale_fill_viridis_c(limits = limits, labels = scales::percent, oob = oob_fn)
+  } else {
+    p + scale_fill_viridis_c(limits = limits, oob = oob_fn)
+  }
+}
+```
+
+## Aim 1: is small-text-*N* instability a text-margin property or an interaction-specific property?
+
+At each effect's own empirically-observed value, sign reliability and power
+by `n_t`:
+
+| `n_t` | zHLVA sign reliability | zPCREFp sign reliability | interaction sign reliability | zHLVA power | zPCREFp power | interaction power |
+|---|---|---|---|---|---|---|
+| 2 | 0.940 | **0.553** | 0.717 | 0.650 | 0.627 | 0.127 |
+| 10 | 0.997 | 0.730 | 0.920 | 0.897 | 0.177 | 0.603 |
+| 35 | 0.997 | 0.860 | 0.930 | 0.917 | 0.300 | 0.577 |
+| 85 | 0.993 | 0.930 | 0.897 | 0.920 | 0.420 | 0.570 |
+| 136 | 0.993 | 0.937 | 0.913 | 0.910 | 0.510 | 0.620 |
+
+**This resolves the question the design set out to answer, and the answer is
+not what the "reverse cohesion effect" framing might suggest.** At `n_t =
+2`, `zPCREFp`'s sign reliability (0.553) is *worse* than the interaction's
+(0.717) -- barely better than a coin flip -- while `zHLVA` (the
+participant-level effect) is comparatively well-behaved (0.940). This is a
+**text-margin property, not an interaction-specific property**: the
+text-level main effect is at least as unstable as the interaction at the
+smallest realistic text sample size, and by this particular diagnostic, more
+so.
+
+`zPCREFp`'s power also shows the "underpowered paradox" signature directly:
+power is *higher* at `n_t = 2` (0.627) than at `n_t = 10` (0.177) -- not
+because small samples are better powered, but because the noisiest, most
+degenerate cell produces wildly inflated estimates that cross the
+significance threshold more often *while being wrong about the sign* half
+the time. A researcher who only sees "significant, p < .05" from a 2-text
+study cannot distinguish this from a well-powered result.
+
+### Aim 1 -- fuller metrics table
+
+The table above reports sign reliability and power only. For completeness
+against Marek et al.'s (2022) full diagnostic set, this expands to
+**Type I (false-positive) rate**, Type S error rate, Type M ratio, median
+bias, coverage, and RMSE. All columns except the new Type I column are
+computed at each term's own empirically-observed effect size, pooled across
+the six participant sample sizes; the Type I column instead comes from the
+`effect_value = 0` point on the same sweep (the true-null case), since a
+false-positive rate is only defined when there is nothing true to detect.
+Surfacing it as an explicit table column (rather than leaving it visible
+only as the orange curve in Figure 4, further below) makes it directly
+comparable, row by row, against power and the other error rates.
+
+```{r}
+#| label: aim1-full-metrics-table
+
+aim1_metrics_by_nt <- aim1_all |>
+  dplyr::group_by(term, n_t) |>
+  dplyr::summarise(
+    power            = mean(excludes_zero, na.rm = TRUE),
+    sign_reliability = mean(correct_sign, na.rm = TRUE),
+    type_s_rate      = mean(sign_error[excludes_zero], na.rm = TRUE),
+    type_m_ratio     = median(inflation_ratio[excludes_zero], na.rm = TRUE),
+    median_bias      = median(bias, na.rm = TRUE),
+    coverage         = mean(covers_truth, na.rm = TRUE),
+    rmse_raw         = sqrt(mean(bias^2, na.rm = TRUE)),
+    rmse_trimmed     = sqrt(mean(pmin(bias^2, quantile(bias^2, 0.95, na.rm = TRUE)), na.rm = TRUE)),
+    n_fits           = dplyr::n(),
+    .groups = "drop"
+  )
+
+aim1_type1_by_nt <- aim1_sweep_combined |>
+  dplyr::filter(effect_value == 0) |>
+  dplyr::group_by(term, n_t) |>
+  dplyr::summarise(type_1_rate = mean(excludes_zero, na.rm = TRUE), .groups = "drop")
+
+aim1_metrics_by_nt <- aim1_metrics_by_nt |>
+  dplyr::left_join(aim1_type1_by_nt, by = c("term", "n_t")) |>
+  dplyr::relocate(type_1_rate, .after = power)
+
+aim1_metrics_by_nt |>
+  dplyr::arrange(term, n_t) |>
+  knitr::kable(
+    digits = 3,
+    col.names = c("Term", "n_t", "Power", "Type I rate", "Sign reliability",
+                  "Type S rate", "Type M ratio", "Median bias", "Coverage",
+                  "RMSE (raw)", "RMSE (trimmed)", "n fits")
+  )
+```
+
+`rmse_raw` is included for completeness but is itself dominated by rare
+pathological fits at small `n_t` (e.g. an outlying -20.3 estimate at
+`n_t = 2`); `rmse_trimmed` (winsorizing squared bias at its 95th percentile
+before averaging) is the more trustworthy summary of typical-case error
+magnitude and should be preferred when comparing across cells. Note that
+`type_1_rate` is nominally expected to be ~0.05 under correct calibration --
+values well above that (as for `zPCREFp` at small `n_t`, previewed in the
+summary table above and detailed mechanistically below) indicate
+miscalibration, not merely bad luck.
+
+### Aim 1 -- visualizations
+
+#### Visualizations of power and error surfaces: showing power or error rate variation over variation in text sample size x participant sample size, for observed effects
+
+```{r}
+#| label: fig-aim1-power-surface
+#| fig-width: 8
+#| fig-height: 4
+#| fig-cap: "Aim 1: power surface across the full joint (n_p, n_t) grid, at each term's own empirically-observed effect size. This is the direct 2-D analog of a Marek et al. (2022)-style Figure 3 sample-size surface: both axes are the two sample-size margins, and tile fill is the probability a 95% Wald CI excludes zero."
+
+aim1_surface <- aim1_all |>
+  dplyr::group_by(term, n_p, n_t) |>
+  dplyr::summarise(power = mean(excludes_zero, na.rm = TRUE), .groups = "drop")
+
+plot_power_heatmap(aim1_surface, fill_var = "power", fill_label = "Power")
+```
+
+The surface makes visible what the by-`n_t` table (pooled over `n_p`)
+cannot -- and the accurate picture is more nuanced than a coarse read
+suggests (the numbers below were checked directly against
+`aim1_surface`). `zHLVA` is the best-behaved term, but its saturation is
+**not** independent of `n_t`: at `n_t >= 10`, power already reaches
+92-100% by `n_p = 100`; at `n_t = 2`, the same `n_p = 100` cell reaches
+only 46%, and power doesn't approach that ceiling (92%) until `n_p =
+1300`. `n_t = 2` still measurably slows `zHLVA` down -- just far less than
+it does the two text-margin terms.
+
+`zPCREFp` and the interaction, once the full surface is examined, turn out
+to diverge sharply from each other, not just from `zHLVA`. The
+**interaction** genuinely needs growth on both margins: at `n_t = 2` its
+power never exceeds 24% anywhere on the `n_p` grid (2-24%), while at
+`n_t >= 10` it reaches 90-96% by `n_p = 1300`+ -- a real, large power gain
+from a bigger text sample. **`zPCREFp` does not show this pattern.** At
+matched `n_p`, its power at `n_t = 2` (20-88% across the `n_p` grid) meets
+or exceeds its power at *every* larger `n_t` in the grid (10, 35, 85, and
+136) in 5 of 6 `n_p` cells -- e.g. at `n_p = 1300`, `n_t = 2` reaches 88%
+while the best any larger `n_t` achieves there is 72% (`n_t = 136`). This
+is not `zPCREFp` being well-powered at `n_t = 2`; it is the underpowered
+paradox previewed above, visible directly on the surface -- the apparent
+"power" at `n_t = 2` is inflated by the same singular-fit false-positive
+mechanism documented later in this section, not a sign that more
+participants are working as they should for this term.
+
+::: {.callout-important}
+## A second, independent illustration of the underpowered paradox
+
+The `n_t = 2` reversal above is worth flagging explicitly as its **own**
+piece of evidence for the underpowered paradox, distinct from the sign-
+reliability/Type S evidence discussed earlier (`zPCREFp`'s 0.553 sign
+reliability at `n_t = 2`, worse than the interaction's) and later
+(the Type S/Type M curves). That evidence all requires first conditioning
+on which fits were "significant" and then asking whether their *sign* was
+right. The power-surface reversal needs no such conditioning: it shows up
+in the raw significance rate itself, at every single `n_p` on the grid
+(not just pooled, as in the earlier by-`n_t` table), without ever
+inspecting sign or magnitude. Two structurally different diagnostics --
+one about whether significant results have the correct sign, one about
+how often results are significant at all -- point to the same underlying
+`n_t = 2` identifiability breakdown, which is stronger corroboration than
+either diagnostic could provide alone.
+:::
+
+The same `(n_p, n_t)` surface can be drawn for every other diagnostic in
+the fuller metrics table above, not just power -- doing so shows directly
+whether the text-margin concentration visible in the power surface is a
+general property of the smallest cells or specific to power itself. These
+seven surfaces are computed by term x `n_p` x `n_t` (i.e. one level finer
+than the by-`n_t`-only fuller metrics table above, which pools over `n_p`).
+
+```{r}
+#| label: fig-aim1-error-surfaces
+#| fig-width: 13
+#| fig-height: 16
+#| fig-cap: "Aim 1: the remaining seven diagnostics from the fuller metrics table, each drawn as its own (n_p, n_t) surface (the same layout as the power surface above). Type I rate, sign reliability, Type S rate, and coverage share the fixed [0, 100%] color scale used for power, for direct comparability; Type M ratio and RMSE (trimmed) use a free color scale, capped (squished, not truncated -- the printed number is always the true value) at a fixed upper limit so that rare extreme outlier cells at n_t = 2 don't wash out the rest of the scale; median bias uses a diverging scale centered at zero."
+
+aim1_surfaces_extra <- aim1_all |>
+  dplyr::group_by(term, n_p, n_t) |>
+  dplyr::summarise(
+    sign_reliability = mean(correct_sign, na.rm = TRUE),
+    type_s_rate      = mean(sign_error[excludes_zero], na.rm = TRUE),
+    type_m_ratio     = median(inflation_ratio[excludes_zero], na.rm = TRUE),
+    median_bias      = median(bias, na.rm = TRUE),
+    coverage         = mean(covers_truth, na.rm = TRUE),
+    rmse_trimmed     = sqrt(mean(pmin(bias^2, quantile(bias^2, 0.95, na.rm = TRUE)), na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+aim1_type1_surface <- aim1_sweep_combined |>
+  dplyr::filter(effect_value == 0) |>
+  dplyr::group_by(term, n_p, n_t) |>
+  dplyr::summarise(type_1_rate = mean(excludes_zero, na.rm = TRUE), .groups = "drop")
+
+aim1_surfaces_extra <- aim1_surfaces_extra |>
+  dplyr::left_join(aim1_type1_surface, by = c("term", "n_p", "n_t"))
+
+bias_limit <- max(abs(aim1_surfaces_extra$median_bias), na.rm = TRUE)
+
+panel_surface_type1 <- plot_power_heatmap(
+  aim1_surfaces_extra, fill_var = "type_1_rate", fill_label = "Type I\nrate"
+) + labs(title = "Type I (false-positive) rate")
+
+panel_surface_signrel <- plot_power_heatmap(
+  aim1_surfaces_extra, fill_var = "sign_reliability", fill_label = "Sign\nreliability"
+) + labs(title = "Sign reliability")
+
+panel_surface_types <- plot_power_heatmap(
+  aim1_surfaces_extra, fill_var = "type_s_rate", fill_label = "Type S\nrate"
+) + labs(title = "Type S (sign) error rate")
+
+panel_surface_coverage <- plot_power_heatmap(
+  aim1_surfaces_extra, fill_var = "coverage", fill_label = "Coverage"
+) + labs(title = "95% CI coverage")
+
+panel_surface_typem <- plot_power_heatmap(
+  aim1_surfaces_extra, fill_var = "type_m_ratio", fill_label = "Type M\nratio",
+  limits = c(0, 10), label_format = "number", digits = 1, squish = TRUE
+) + labs(title = "Type M (magnitude) ratio")
+
+panel_surface_bias <- plot_power_heatmap(
+  aim1_surfaces_extra, fill_var = "median_bias", fill_label = "Median\nbias",
+  limits = c(-bias_limit, bias_limit), label_format = "number", digits = 3, diverging = TRUE
+) + labs(title = "Median bias")
+
+panel_surface_rmse <- plot_power_heatmap(
+  aim1_surfaces_extra, fill_var = "rmse_trimmed", fill_label = "RMSE\n(trimmed)",
+  limits = c(0, 1.5), label_format = "number", digits = 2, squish = TRUE
+) + labs(title = "RMSE (trimmed)")
+
+patchwork::wrap_plots(
+  panel_surface_type1, panel_surface_signrel, panel_surface_types, panel_surface_coverage,
+  panel_surface_typem, panel_surface_bias, panel_surface_rmse,
+  ncol = 2
+)
+```
+
+Three findings stand out. First, **Type I rate, sign reliability, Type S
+rate, and coverage all show the same qualitative pattern as power**: the
+worst cells are concentrated at `n_t = 2`, and (for `zPCREFp` and the
+interaction) growing `n_p` alone at `n_t = 2` does not fix them --
+confirming that the text-margin concentration already established for
+power is a general property of this design's smallest cells, not specific
+to the power diagnostic. Coverage is the starkest illustration: nominal
+coverage should be ~95% everywhere, but `zPCREFp`'s coverage at `n_t = 2`
+falls to as low as 10-12% at the *largest* participant sample sizes (`n_p`
+= 1300-1497) -- more data on the wrong margin makes the miscalibration
+*more* confidently wrong, not less, exactly the "overconfident, too-narrow
+Wald SE" mechanism documented later in this section.
+
+Second, **the Type M ratio panel needs a specific interpretive caveat**:
+its most extreme cell (the interaction, `n_p = 25`, `n_t = 2`, median ratio
+~85x, squished to the scale's dark edge here) is not evidence of an
+enormous absolute error -- the interaction's own effect size is only
+0.054, so even a modest absolute bias becomes a huge *ratio* when divided
+by a true value that small. The median bias panel alongside it shows this
+directly: median bias stays within +/-0.12 in every cell on this entire
+grid, including the ones with triple-digit Type M ratios. Ratio-based
+inflation measures like Type M are most informative for effects of
+moderate-to-large size and can be misleadingly dramatic-looking for a
+near-zero true effect; this document's own `zHLVA:zPCREFp` sweep is a
+concrete illustration of that general statistical caveat, not a sign of a
+uniquely severe problem with the interaction term.
+
+(A related, more mundane artifact: one cell -- the interaction at
+`n_p = 100, n_t = 85` -- shows as blank/grey in the Type S and Type M
+panels. Both diagnostics are conditional on significance, and this
+particular cell happened to have zero significant fits among its 50
+replicates; dividing by zero significant fits leaves the diagnostic
+undefined rather than zero, which `ggplot2` renders as a missing tile
+rather than a colored one. This is a small-sample artifact of this
+specific `(n_p, n_t)` cell, not a data error.)
+
+Third, the **RMSE (trimmed) surface differs from the by-`n_t`-only version
+in the fuller metrics table above** because it is computed per `(term,
+n_p, n_t)` cell here (50 replicates) rather than pooled over all six `n_p`
+values (300 replicates) -- the finer grouping means the within-cell 95th-
+percentile winsorization threshold is itself estimated from fewer points,
+so it is less robust to a single extreme replicate (e.g. `zHLVA` at `n_p =
+25, n_t = 2`, where one pathological fit still pulls the trimmed RMSE up
+to 2.86 despite `zHLVA` otherwise behaving well at that cell). Treat the
+by-`n_t`-only table's RMSE column as the more stable summary, and this
+finer surface as showing *where* that instability is concentrated rather
+than as a precise per-cell estimate in its own right.
+
+#### Visualizations of power or error rate (sign reliability, type S, type M) variation over variation in text sample size and over participant sample size, for observed effects
+
+```{r}
+#| label: fig-aim1-metrics-vs-np
+#| fig-cap: "Aim 1: power, sign reliability, Type S error rate, and Type M exaggeration ratio vs. participant sample size (n_p), at each term's own empirically-observed effect size, pooled across all five text sample sizes and 50 replicates/cell."
+
+aim1_metrics_by_np <- aim1_all |>
+  dplyr::group_by(term, n_p) |>
+  dplyr::summarise(
+    power            = mean(excludes_zero, na.rm = TRUE),
+    sign_reliability = mean(correct_sign, na.rm = TRUE),
+    type_s_rate      = mean(sign_error[excludes_zero], na.rm = TRUE),
+    type_m_ratio     = median(inflation_ratio[excludes_zero], na.rm = TRUE),
+    n_fits           = dplyr::n(),
+    .groups = "drop"
+  )
+
+plot_metrics_vs_x(
+  aim1_metrics_by_np, x_var = "n_p",
+  metrics = c("power", "sign_reliability", "type_s_rate", "type_m_ratio"),
+  metric_labels = aim1_metric_labels,
+  x_lab = "Participant sample size (n_p, log scale)",
+  x_breaks = n_p_grid
+)
+```
+
+This is the participant-margin counterpart of the text-margin figure
+below: the same four diagnostics, pooled over all five `n_t` values
+instead of all six `n_p` values, so the two figures together examine each
+diagnostic over both margins. `zHLVA`'s curves here should look like
+conventional, well-behaved diagnostics improving monotonically with `n_p`
+(power and sign reliability rising, Type S/M falling), consistent with it
+being the participant-margin-limited effect; `zPCREFp` and the interaction
+are pooled here across text sample sizes that range from the pathological
+`n_t = 2` up to the well-behaved `n_t = 136`, so any distinctive `n_t = 2`
+signature (the underpowered paradox) is diluted rather than isolated in
+this view -- the `n_t`-axis figure below, and the full `(n_p, n_t)`
+surfaces above, remain the more direct way to see that pathology.
+
+```{r}
+#| label: fig-aim1-metrics-vs-nt
+#| fig-cap: "Aim 1: power, sign reliability, Type S error rate, and Type M exaggeration ratio vs. text sample size (n_t), at each term's own empirically-observed effect size, pooled across all six participant sample sizes and 50 replicates/cell."
+
+plot_metrics_vs_x(
+  aim1_metrics_by_nt, x_var = "n_t",
+  metrics = c("power", "sign_reliability", "type_s_rate", "type_m_ratio"),
+  metric_labels = aim1_metric_labels,
+  x_lab = "Text sample size (n_t, log scale)"
+)
+```
+
+This is the one-axis (pooled-over-`n_p`) counterpart of the surface above,
+and the visual counterpart of Aim 1's prose finding: `zPCREFp` has the
+*worst* sign reliability and the *highest* Type S/Type M values at
+`n_t = 2`, worse even than the interaction -- while also having power
+*higher* at `n_t = 2` than at `n_t = 10`, the "underpowered paradox"
+signature (a significant result here is more likely to be wrong, not more
+trustworthy).
+
+##### Mechanism: what the underpowered paradox looks like at the individual-estimate level
+
+The summary diagnostics above (power, sign reliability, Type S/M rates) are
+all *aggregates* over 50 replicate fits per cell. It can be easier to see
+why the paradox happens by looking at the individual replicate estimates
+themselves, rather than only their summary statistics. The three panels
+below show every individual estimate from Aim 1's fits at `n_p = 1497` --
+the **largest** participant sample size in the grid, held constant across
+every row and column so that the funnel shown reflects the text margin
+(`n_t`) specifically, not participant-margin noise -- for `zHLVA` (top),
+`zPCREFp` (middle), and the `zHLVA:zPCREFp` interaction (bottom): one dot
+per replicate fit, one column per simulated true effect size, one row per
+text sample size. `zHLVA` is included here (extending the original
+two-panel version of this figure) for the same reason the tables/heatmaps
+above already treat all three terms symmetrically: since the whole point of
+this document is now to compare all three effects on the same footing, not
+just the interaction and its text-level counterpart, the mechanism-level
+view should do the same. This uses only already-computed replicate
+estimates (`results_phase2/aim1_hlva.rds`) -- no new simulation.
+
+```{r}
+#| label: fig-aim1-distribution-explainer
+#| fig-width: 12
+#| fig-height: 12.5
+#| fig-cap: "Aim 1: individual estimates (one dot per replicate fit, n_p held constant at its largest grid value, 1497) for zHLVA (top), zPCREFp (middle), and the zHLVA:zPCREFp interaction (bottom), by text sample size (rows, narrower at top) and true effect size (columns, labeled \"true = ...\"). Dashed vertical line = the true value being simulated in that column. Red = a 95% CI that excludes zero (\"significant\"); grey = not significant. A handful of pathological estimates beyond the plotted range (all at n_t = 2) are clipped to the axis edge for readability."
+
+illustrative_n_p <- max(n_p_grid)
+
+make_aim1_distribution_panel <- function(data, term_name, x_clip, illustrative_n_p,
+                                          show_x_axis = TRUE) {
+  df <- data |>
+    dplyr::filter(term == term_name, n_p == illustrative_n_p) |>
+    dplyr::mutate(
+      n_t_f = factor(n_t, levels = n_t_grid),
+      significant = ifelse(excludes_zero, "Significant (95% CI excludes 0)", "Not significant"),
+      estimate_clipped = pmax(pmin(estimate, x_clip), -x_clip)
+    )
+
+  ggplot(df, aes(x = estimate_clipped, y = n_t_f, color = significant, fill = significant)) +
+    ggdist::stat_dots(
+      side = "both", scale = 0.85, alpha = 0.55,
+      binwidth = ggplot2::unit(c(1.3, 2.2), "mm"),
+      overflow = "compress"
+    ) +
+    geom_vline(aes(xintercept = effect_value), linetype = "dashed", color = "black", linewidth = 0.5) +
+    facet_wrap(~effect_value, nrow = 1,
+               labeller = as_labeller(function(x) paste0("true = ", x))) +
+    scale_x_continuous(breaks = c(-x_clip, 0, x_clip)) +
+    scale_color_manual(values = c("Significant (95% CI excludes 0)" = "#b2182b",
+                                   "Not significant" = "grey45")) +
+    scale_fill_manual(values = c("Significant (95% CI excludes 0)" = "#b2182b",
+                                  "Not significant" = "grey45")) +
+    labs(
+      x = if (show_x_axis) paste0(term_name, " estimate (clipped to [-", x_clip, ", ", x_clip, "])") else NULL,
+      y = "n_t", color = NULL, fill = NULL
+    ) +
+    theme_bw(base_size = 10) +
+    theme(
+      panel.border = element_rect(color = "grey35", fill = NA, linewidth = 0.7),
+      panel.spacing = unit(1.1, "lines"),
+      strip.background = element_rect(fill = "grey85", color = "grey35"),
+      strip.text = element_text(face = "bold", size = 8.5),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_blank(),
+      legend.position = "bottom"
+    )
+}
+
+panel_dist_hlva <- make_aim1_distribution_panel(
+  aim1_hlva, "zHLVA", x_clip = 2, illustrative_n_p = illustrative_n_p, show_x_axis = FALSE
+) + labs(title = "zHLVA (participant-level main effect)")
+
+panel_dist_pcref <- make_aim1_distribution_panel(
+  aim1_pcref, "zPCREFp", x_clip = 2, illustrative_n_p = illustrative_n_p, show_x_axis = FALSE
+) + labs(title = "zPCREFp (text-level main effect)")
+
+panel_dist_interaction <- make_aim1_distribution_panel(
+  aim1_interaction, "zHLVA:zPCREFp", x_clip = 1.5, illustrative_n_p = illustrative_n_p, show_x_axis = TRUE
+) + labs(title = "zHLVA:zPCREFp (interaction)")
+
+(panel_dist_hlva / panel_dist_pcref / panel_dist_interaction) +
+  patchwork::plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+Four things are visible here that the summary tables/plots only imply.
+First, the funnel shape itself, present in **all three** rows: each cloud
+of dots is wide at the bottom (`n_t = 2`) and collapses to a tight cluster
+around the dashed true-value line by the top (`n_t = 136`) -- the textbook
+"wide at small *N*, narrow at large *N*" funnel, for every true effect size
+simulated, for every term (participant-level or text-level). Second, and
+this is the paradox in its most direct form: in `zPCREFp`'s leftmost
+column (`true = 0`, i.e. **no true effect at all**), a substantial share of
+the `n_t = 2` dots are still colored red -- individually indistinguishable,
+in a real analysis, from a genuine discovery. Those red dots at `n_t = 2`
+are false positives purely from noise, and they are just as red (just as
+"significant", p < .05) as the true positives further right. A
+significance threshold cannot tell these apart; only a larger text sample
+-- more rows lower down turning into fewer, tighter, more-often-
+correctly-colored rows higher up -- can.
+
+Third, `zHLVA`'s top row makes the *contrast* with the text-level terms
+directly visible for the first time in this document: its `n_t = 2` funnel
+is comparatively narrow already (few dots reach the clip edge), and its
+`true = 0` column has only a modest excess of red dots relative to the
+nominal 5% -- consistent with its Type I rate staying much closer to
+nominal at every `n_t` (Table 2 above). The instability visible in the
+`zPCREFp` and interaction rows is not a generic property of "estimating
+anything at `n_t = 2`" -- it is specific to terms whose identification
+depends on the text margin.
+
+Fourth, comparing the `zPCREFp` and interaction rows directly answers
+whether the interaction's funnel looks like `zPCREFp`'s: **not really**. At
+`n_t = 2`, the interaction's dots are mostly grey, not red, across every
+column including its own empirically-observed effect size (`true = 0.054`)
+-- consistent with its much lower power at that cell (0.127, vs.
+`zPCREFp`'s 0.627 from the table above). Where `zPCREFp`'s problem at
+`n_t = 2` is "too many confidently-wrong answers," the interaction's is
+closer to "usually no answer at all, and on the rare occasions there is
+one, it is not obviously more trustworthy than `zPCREFp`'s" -- the same
+underlying text-margin scarcity, but manifesting as a power problem more
+than a false-discovery problem for this particular term.
+
+###### Why can an estimate be "significant" when the true effect is exactly zero?
+
+This is the question the `true = 0` column above raises most sharply, and
+it is worth answering mechanistically rather than leaving it as a
+statistical curiosity. Two different things are going on, and it is
+important to distinguish them.
+
+**It is not simply the ordinary 5% false-positive rate.** A correctly
+calibrated 95% CI is *expected* to exclude a true value of zero 5% of the
+time, by construction -- that is what "95%" means. But the observed rate at
+`n_t = 2` is far above that: the table below shows that 66.3% of the
+`zPCREFp` fits at `n_t = 2` under a true null are "significant," roughly
+13x the nominal rate. Something is actively miscalibrated here, not merely
+unlucky.
+
+**The mechanism is a random-effects identifiability breakdown, not sampling
+bad luck on the covariate itself.** With only `n_t = 2` texts, there is
+exactly one degree of freedom available to describe how the two sampled
+texts differ from each other -- two points determine a line perfectly, with
+nothing left over to check whether that line is trustworthy. The "correct"
+model asks `glmer` to split any such between-text difference into two
+pieces: a text-level random intercept (`(1 | text_id)`, capturing
+idiosyncratic, unexplained differences between texts) and the fixed
+`zPCREFp` slope (capturing the cohesion effect specifically). Estimating a
+random-intercept *variance* from only 2 groups is close to impossible --
+there is essentially no information to distinguish "these two texts differ
+a lot by chance" from "these two texts differ a lot systematically." In
+practice, `lme4` resolves this by pinning the text-level variance at (or
+extremely near) its zero boundary -- a **singular fit**:
+
+```{r}
+#| label: fig-aim1-singular-fit-diagnostic
+
+null_nt2_diagnostic <- aim1_pcref |>
+  dplyr::filter(term == "zPCREFp", n_t == 2, effect_value == 0)
+
+cat("Fit status, all 300 replicates (n_t = 2, true zPCREFp effect = 0):\n")
+table(null_nt2_diagnostic$status)
+
+null_nt2_diagnostic |>
+  dplyr::group_by(excludes_zero) |>
+  dplyr::summarise(
+    n = dplyr::n(),
+    `median |estimate|` = round(median(abs(estimate), na.rm = TRUE), 3),
+    `median std. error` = round(median(std.error, na.rm = TRUE), 3),
+    .groups = "drop"
+  )
+```
+
+Every single one of these 300 replicates converges to a singular fit --
+the text-level random-intercept variance collapses to zero every time
+`n_t = 2`, regardless of how many participants are simulated. Once that
+variance is pinned at zero, the model has nowhere else to put the two
+sampled texts' chance difference except into the only fixed-effect
+predictor that differs between them -- `zPCREFp`. This inflates the fixed-
+effect point estimate (median |estimate| = 0.734 among the "significant"
+fits, versus a true value of exactly 0) and simultaneously produces an
+overconfident, too-narrow Wald standard error (median SE = 0.106 among the
+"significant" fits, versus 0.294 among the fits that correctly stayed
+non-significant) -- because the SE formula implicitly assumes the
+random-effects variance structure has been reliably estimated, an
+assumption that fails precisely at this boundary. Inflated estimate +
+deflated SE together push a large share of purely-noise-driven fits across
+the 95%-CI-excludes-zero line.
+
+In short: at `n_t = 2`, the model is not really testing "does cohesion
+predict comprehension" -- it is testing "do these two specific,
+randomly-sampled texts differ," and then attributing 100% of whatever
+difference it finds to cohesion, because there is no other place left for
+that difference to go. This is a more extreme version of the same
+family of problem documented elsewhere in this project as random-effects
+misspecification (Aim 3's omitted-`text.id` bias, and Phase 1's finding
+that pseudoreplication introduces genuine bias, not just imprecision) --
+here the grouping factor is nominally *in* the model formula, but with only
+2 groups it is statistically unidentifiable in practice, which behaves much
+like omitting it.
+
+#### Visualizations of power and error surfaces: showing power or error rate variation over variation in text sample size x participant sample size, for varying effects
+
+Strictly, **power** is the probability of correctly detecting an effect
+that truly exists in the population, under conventional null-hypothesis
+significance testing -- it is only a meaningful concept when the true
+effect is non-zero. The power surface and the metrics-vs-`n_t` plot above
+both hold the true effect size fixed at each term's own observed value;
+the figure below instead sweeps the true effect size down to and through
+zero for all three terms, so that the same plot shows genuine power curves
+(non-zero effect) alongside the **Type I (false-positive) rate** (the
+`effect size = 0` case, where there is nothing to detect). Rather than
+color that `effect size = 0` line as if it were simply the lightest point
+on the same power-curve palette -- which would imply it answers the same
+question as its non-zero neighbors -- it is drawn in a distinct,
+colorblind-friendly bright orange, held constant across all three rows.
+
+```{r}
+#| label: fig-aim1-power-curves
+#| fig-width: 10
+#| fig-height: 9.5
+#| fig-cap: "Aim 1: classic power curves -- P(significant) vs. participant sample size (n_p, log scale), one row per term, faceted by text sample size (n_t) across columns. Each row uses its own sequential color palette (darker = larger effect size); the thicker line/larger points mark each term's empirically-observed effect size; the bright orange line/points are the Type I (false-positive) rate, i.e. the effect size = 0 case."
+
+aim1_metrics_by_effect <- aim1_sweep_combined |>
+  dplyr::group_by(term, effect_value, n_p, n_t) |>
+  dplyr::summarise(
+    power            = mean(excludes_zero, na.rm = TRUE),
+    sign_reliability = mean(correct_sign, na.rm = TRUE),
+    coverage         = mean(covers_truth, na.rm = TRUE),
+    type_s_rate      = mean(sign_error[excludes_zero], na.rm = TRUE),
+    type_m_ratio     = median(inflation_ratio[excludes_zero], na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Each term sweeps a different set of effect-size values (see the sweep
+# grids above), so a single shared color scale across all three rows would
+# either compress each term's own 5-point range into indistinguishable
+# shades or mix three unrelated numeric scales under one legend. Instead,
+# each term gets its own sequential ColorBrewer palette (darker = larger
+# effect), and the curve at that term's empirically-observed effect size
+# (the middle grid point in every sweep) is drawn thicker and with larger
+# points so it is identifiable at a glance. Generalized from the original
+# power-only panel builder so the same machinery produces sign-reliability
+# and coverage curves below: `metric_var`/`y_lab` select which column to
+# plot, `include_zero` drops the true-null point entirely when a metric
+# has no meaningful value there (sign reliability -- see prose below), and
+# `highlight_zero_orange` controls whether a still-included zero point gets
+# the "different question" orange treatment used for power's Type I rate.
+make_aim1_curve_panel <- function(term_name, effect_grid, palette_name, metric_var, y_lab,
+                                   axis_title = NULL, legend_title = NULL,
+                                   include_zero = TRUE, zero_label = "no true effect",
+                                   highlight_zero_orange = TRUE, ref_line = NULL, log_y = FALSE,
+                                   y_limits = NULL) {
+  own_value <- own_effect[[term_name]]
+  eff_grid <- if (include_zero) effect_grid else effect_grid[effect_grid != 0]
+
+  # Skip the palette's palest 2 shades (indices 1-2 of the 9-class Brewer
+  # palette) before interpolating -- the raw 5-class palette's lightest
+  # color is too close to white/background to read easily as a line.
+  pal <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(9, palette_name)[3:9])(length(eff_grid))
+  if (include_zero && highlight_zero_orange && 0 %in% eff_grid) {
+    pal[eff_grid == 0] <- "#E69F00"  # Okabe-Ito orange, colorblind-friendly
+  }
+  effect_labels <- dplyr::case_when(
+    eff_grid == 0 & include_zero ~ paste0(eff_grid, " (", zero_label, ")"),
+    eff_grid == own_value        ~ paste0(eff_grid, " (observed)"),
+    TRUE                         ~ as.character(eff_grid)
+  )
+
+  df <- aim1_metrics_by_effect |>
+    dplyr::filter(term == term_name, effect_value %in% eff_grid) |>
+    dplyr::mutate(
+      effect_f = factor(effect_value, levels = eff_grid, labels = effect_labels),
+      is_own   = effect_value == own_value
+    )
+
+  p <- ggplot(df, aes(x = n_p, y = .data[[metric_var]], color = effect_f, group = effect_f)) +
+    geom_line(aes(linewidth = is_own)) +
+    geom_point(aes(size = is_own)) +
+    facet_wrap(~n_t, nrow = 1, labeller = label_both) +
+    scale_x_log10(breaks = n_p_grid, labels = scales::label_comma()) +
+    scale_color_manual(values = pal, name = legend_title %||% term_name) +
+    scale_linewidth_manual(values = c(`FALSE` = 0.5, `TRUE` = 1.3), guide = "none") +
+    scale_size_manual(values = c(`FALSE` = 1, `TRUE` = 2.2), guide = "none") +
+    labs(x = axis_title, y = y_lab) +
+    theme_minimal(base_size = 9) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5),
+      legend.position = "right"
+    )
+
+  if (!is.null(ref_line)) {
+    p <- p + geom_hline(yintercept = ref_line, linetype = "dotted", color = "grey40", linewidth = 0.4)
+  }
+  if (log_y) {
+    p <- p + scale_y_log10()
+  }
+  # coord_cartesian (not scale limits) so a fixed [0, 1] y-axis is shared
+  # across power/sign-reliability/coverage/Type S -- directly comparable
+  # panel-to-panel -- without silently dropping any data point that might
+  # fall (even marginally) outside that range.
+  if (!is.null(y_limits)) {
+    p <- p + coord_cartesian(ylim = y_limits)
+  }
+  p
+}
+
+panel_hlva <- make_aim1_curve_panel("zHLVA", b_hlva_grid, "Greens",
+                                     metric_var = "power", y_lab = "Power",
+                                     legend_title = "zHLVA effect size",
+                                     zero_label = "no true effect -- Type I rate",
+                                     y_limits = c(0, 1))
+panel_pcref <- make_aim1_curve_panel("zPCREFp", b_pcref_grid, "Blues",
+                                      metric_var = "power", y_lab = "Power",
+                                      legend_title = "zPCREFp effect size",
+                                      zero_label = "no true effect -- Type I rate",
+                                      y_limits = c(0, 1))
+panel_interaction <- make_aim1_curve_panel("zHLVA:zPCREFp", b_interaction_grid, "Purples",
+                                            metric_var = "power", y_lab = "Power",
+                                            axis_title = "Participant sample size (n_p, log scale)",
+                                            legend_title = "Interaction effect size",
+                                            zero_label = "no true effect -- Type I rate",
+                                            y_limits = c(0, 1))
+
+panel_hlva / panel_pcref / panel_interaction
+```
+
+The `zPCREFp` row is the most diagnostic: at `n_t = 2`, the bright orange
+Type I (false-positive) rate curve (true effect = 0) stays **non-monotonic
+and never near zero across the entire `n_p` range** (~20-60%) -- i.e., a
+sizeable share of fits at this text sample size are "significant" purely
+from noise, regardless of how many participants are added. At larger
+`n_t`, that same orange curve flattens out near zero as expected (a
+well-calibrated Type I rate), and the colored (genuine power) curves
+separate out into a conventional monotonically-rising power curve as `n_p`
+grows -- confirming the pathology is specific to the `n_t = 2` regime, not
+a general property of `zPCREFp`. This is the clearest single illustration
+in this document of the underpowered paradox's mechanism: at the modal
+literature text sample size, growing the participant sample does not
+rescue the false-positive problem -- it is a text-margin problem, not a
+participant-margin one. The highlighted "(observed)" curve in each row --
+the effect size actually estimated from this project's real data -- sits in
+the middle of its own sweep by construction, letting readers see directly
+how much power/error-rate behavior would differ if the true effect were
+smaller or larger than what was actually observed.
+
+The same effect-size x `n_p` x `n_t` curve layout can be drawn for **sign
+reliability** and **95% CI coverage** as well, using the same
+`make_aim1_curve_panel()` machinery as the power curves above -- this
+shows whether the same margin-dependence and effect-size sensitivity
+apply to those two diagnostics, not just power.
+
+```{r}
+#| label: fig-aim1-sign-reliability-curves
+#| fig-width: 10
+#| fig-height: 9.5
+#| fig-cap: "Aim 1: sign reliability -- P(estimated sign matches true sign) -- vs. participant sample size (n_p, log scale), one row per term, faceted by text sample size (n_t). Layout and color convention match the power curves above, except the true-null (effect = 0) point is omitted (see prose below)."
+
+# Sign reliability has no meaningful value at effect_value = 0: with no
+# true effect, sign(true_value) = 0, so `correct_sign` (sign(estimate) ==
+# sign(true_value)) is essentially never TRUE by construction, not because
+# of any instability -- there is no "correct sign" to recover when there
+# is nothing there. The zero point is therefore dropped entirely
+# (`include_zero = FALSE`) rather than plotted as a degenerate near-0%
+# curve or given the power curves' orange "different question" treatment.
+panel_hlva_sr <- make_aim1_curve_panel("zHLVA", b_hlva_grid, "Greens",
+                                        metric_var = "sign_reliability", y_lab = "Sign reliability",
+                                        legend_title = "zHLVA effect size", include_zero = FALSE,
+                                        y_limits = c(0, 1))
+panel_pcref_sr <- make_aim1_curve_panel("zPCREFp", b_pcref_grid, "Blues",
+                                         metric_var = "sign_reliability", y_lab = "Sign reliability",
+                                         legend_title = "zPCREFp effect size", include_zero = FALSE,
+                                         y_limits = c(0, 1))
+panel_interaction_sr <- make_aim1_curve_panel("zHLVA:zPCREFp", b_interaction_grid, "Purples",
+                                               metric_var = "sign_reliability", y_lab = "Sign reliability",
+                                               axis_title = "Participant sample size (n_p, log scale)",
+                                               legend_title = "Interaction effect size", include_zero = FALSE,
+                                               y_limits = c(0, 1))
+
+panel_hlva_sr / panel_pcref_sr / panel_interaction_sr
+```
+
+`zPCREFp`'s row again shows the underpowered paradox's flatness signature,
+this time on sign reliability rather than power: at `n_t = 2`, sign
+reliability sits in the 0.4-0.8 range **across the entire effect-size
+sweep**, including its largest simulated effect size (0.35, comparable in
+magnitude to `zHLVA`'s own effect) -- and it stays there regardless of
+`n_p`, from 25 participants up to the full 1497. Growing the participant
+sample at `n_t = 2` does not resolve the coin-flip-adjacent sign
+uncertainty even for a comparatively large text-level effect. By contrast,
+the same effect size (0.35) reaches ~0.92-1.0 sign reliability once
+`n_t = 10`, and a perfect 1.0 by `n_t = 136` at every `n_p`. `zHLVA`'s row
+again saturates near 1.0 already at modest `n_p`, independent of `n_t` --
+the same participant-margin/text-margin split documented throughout this
+section holds for sign reliability just as it does for power.
+
+```{r}
+#| label: fig-aim1-coverage-curves
+#| fig-width: 10
+#| fig-height: 9.5
+#| fig-cap: "Aim 1: 95% CI coverage -- P(the Wald CI contains the true value) -- vs. participant sample size (n_p, log scale), one row per term, faceted by text sample size (n_t). Dotted horizontal line marks nominal 95% coverage. Unlike sign reliability, coverage is well-defined at effect = 0 (a CI can cover a true value of exactly zero) and is included without the orange re-color, since it is not answering a qualitatively different question there -- 95% coverage is the target at every effect size, including zero."
+
+panel_hlva_cov <- make_aim1_curve_panel("zHLVA", b_hlva_grid, "Greens",
+                                         metric_var = "coverage", y_lab = "95% CI coverage",
+                                         legend_title = "zHLVA effect size",
+                                         highlight_zero_orange = FALSE, zero_label = "no true effect",
+                                         ref_line = 0.95, y_limits = c(0, 1))
+panel_pcref_cov <- make_aim1_curve_panel("zPCREFp", b_pcref_grid, "Blues",
+                                          metric_var = "coverage", y_lab = "95% CI coverage",
+                                          legend_title = "zPCREFp effect size",
+                                          highlight_zero_orange = FALSE, zero_label = "no true effect",
+                                          ref_line = 0.95, y_limits = c(0, 1))
+panel_interaction_cov <- make_aim1_curve_panel("zHLVA:zPCREFp", b_interaction_grid, "Purples",
+                                                metric_var = "coverage", y_lab = "95% CI coverage",
+                                                axis_title = "Participant sample size (n_p, log scale)",
+                                                legend_title = "Interaction effect size",
+                                                highlight_zero_orange = FALSE, zero_label = "no true effect",
+                                                ref_line = 0.95, y_limits = c(0, 1))
+
+panel_hlva_cov / panel_pcref_cov / panel_interaction_cov
+```
+
+`zPCREFp`'s coverage curves show the clearest and most alarming pattern of
+the three metrics covered in this section: at `n_t = 2`, coverage falls
+from ~80-86% at `n_p = 25` down to as low as **10-24%** at `n_p` = 1300 or
+1497 -- and this collapse happens **at every effect size on the sweep,
+including the true-null case** (coverage 0.80 -> 0.16 across the same
+`n_p` range when the true effect is exactly zero). That "more data makes
+it worse" direction is the opposite of what more participants should do,
+and confirms that the overconfident-Wald-SE mechanism documented earlier
+in this section (the text-level random-intercept variance collapsing to
+zero at `n_t = 2`, in "Why can an estimate be 'significant' when the true
+effect is exactly zero?" above) is not a quirk of the one effect size
+shown in the earlier error-surfaces figure -- it operates identically
+whether or not there is a true effect to detect. `zHLVA` and, to a lesser extent, the interaction
+stay much closer to the nominal 95% line (dotted) throughout, again
+consistent with their comparative insulation from this project's
+chronic text-sample scarcity.
+
+The same treatment extends to the two remaining diagnostics from the
+metrics-vs-`n_t` four-panel figure earlier in this section -- **Type S
+(sign) error rate** and **Type M (magnitude) ratio** -- both conditional
+on significance, so both use the same `include_zero = FALSE` convention
+as sign reliability above (a "wrong sign" or "inflation ratio" needs a
+true, non-zero sign/magnitude to be wrong or inflated relative to; see the
+prose below the figures for the mechanistic detail).
+
+```{r}
+#| label: fig-aim1-type-s-curves
+#| fig-width: 10
+#| fig-height: 9.5
+#| fig-cap: "Aim 1: Type S (sign) error rate -- P(wrong sign | significant) -- vs. participant sample size (n_p, log scale), one row per term, faceted by text sample size (n_t). The true-null (effect = 0) point is omitted, as for sign reliability above: conditioning on significance at a true effect of exactly zero makes Type S trivially ~100% by construction, not informative of miscalibration."
+
+panel_hlva_ts <- make_aim1_curve_panel("zHLVA", b_hlva_grid, "Greens",
+                                        metric_var = "type_s_rate", y_lab = "Type S rate",
+                                        legend_title = "zHLVA effect size", include_zero = FALSE,
+                                        y_limits = c(0, 1))
+panel_pcref_ts <- make_aim1_curve_panel("zPCREFp", b_pcref_grid, "Blues",
+                                         metric_var = "type_s_rate", y_lab = "Type S rate",
+                                         legend_title = "zPCREFp effect size", include_zero = FALSE,
+                                         y_limits = c(0, 1))
+panel_interaction_ts <- make_aim1_curve_panel("zHLVA:zPCREFp", b_interaction_grid, "Purples",
+                                               metric_var = "type_s_rate", y_lab = "Type S rate",
+                                               axis_title = "Participant sample size (n_p, log scale)",
+                                               legend_title = "Interaction effect size", include_zero = FALSE,
+                                               y_limits = c(0, 1))
+
+panel_hlva_ts / panel_pcref_ts / panel_interaction_ts
+```
+
+`zPCREFp` again shows the by-now-familiar flat, margin-dependent pattern,
+mirroring its own sign-reliability curves (Type S rate is, definitionally,
+close to `1 - sign_reliability` among significant fits): at `n_t = 2`,
+Type S rates of 30-80% recur across the effect-size sweep regardless of
+`n_p` -- a "significant" `zPCREFp` result at this text sample size has a
+real chance of pointing the wrong direction even for its largest simulated
+effect size. Both main effects' Type S rates fall toward, and mostly reach,
+zero by `n_t = 10`-`35`; `zHLVA` is again the most consistently
+well-behaved row.
+
+```{r}
+#| label: fig-aim1-type-m-curves
+#| fig-width: 10
+#| fig-height: 9.5
+#| fig-cap: "Aim 1: Type M (magnitude/inflation) ratio -- median |estimate|/|true value| among significant fits -- vs. participant sample size (n_p, log scale), one row per term, faceted by text sample size (n_t). Note the log-scaled y-axis (the ratio spans nearly three orders of magnitude across this grid); the dotted line marks a ratio of 1 (no inflation)."
+
+panel_hlva_tm <- make_aim1_curve_panel("zHLVA", b_hlva_grid, "Greens",
+                                        metric_var = "type_m_ratio", y_lab = "Type M ratio (log scale)",
+                                        legend_title = "zHLVA effect size", include_zero = FALSE,
+                                        ref_line = 1, log_y = TRUE)
+panel_pcref_tm <- make_aim1_curve_panel("zPCREFp", b_pcref_grid, "Blues",
+                                         metric_var = "type_m_ratio", y_lab = "Type M ratio (log scale)",
+                                         legend_title = "zPCREFp effect size", include_zero = FALSE,
+                                         ref_line = 1, log_y = TRUE)
+panel_interaction_tm <- make_aim1_curve_panel("zHLVA:zPCREFp", b_interaction_grid, "Purples",
+                                               metric_var = "type_m_ratio", y_lab = "Type M ratio (log scale)",
+                                               axis_title = "Participant sample size (n_p, log scale)",
+                                               legend_title = "Interaction effect size", include_zero = FALSE,
+                                               ref_line = 1, log_y = TRUE)
+
+panel_hlva_tm / panel_pcref_tm / panel_interaction_tm
+```
+
+The log scale is necessary here, not cosmetic: across this grid, the
+median Type M ratio among significant fits ranges from ~0.92 (a slight
+*under*-estimate, the well-behaved end) up to ~163 at its most extreme
+cell -- a span a linear axis could not show without flattening every other
+line to the bottom of the plot. As with the error-surfaces figure earlier,
+the most extreme ratios cluster at `n_t = 2` for the smallest simulated
+non-zero effect sizes (where a small absolute bias divided by an even
+smaller true value inflates dramatically) -- and the same interpretive
+caveat applies: a large Type M ratio at a small true effect size reflects
+that effect size's small denominator as much as it reflects the estimate's
+absolute error. `zPCREFp`'s row still stands out among the two main-effect
+terms, with ratios remaining elevated (typically 1.5-10x, worse at smaller
+`n_p`) at `n_t = 2` even for its larger simulated effect sizes (0.2, 0.35).
+`zHLVA` settles close to the dotted no-inflation line by `n_t = 35` at
+every `n_p` and every non-zero effect size; the interaction does too for
+its own empirically-observed effect size (0.054) and larger, though its
+*smallest* simulated effect size (0.025) still shows non-trivial inflation
+at `n_t = 35` when `n_p` is also small (ratio ~4-8x at `n_p` = 25-100) --
+consistent with the general point above that Type M ratios are most
+exaggerated, and least representative of a "typical" absolute error, when
+the true effect being divided by is itself very small.
+
+## Aim 2: discovery/replication rates
+
+| `n_t` | zHLVA replication | zPCREFp replication | interaction replication |
+|---|---|---|---|
+| 2 | 0.478 | 0.473 | **0.013** |
+| 10 | 0.803 | 0.157 | 0.250 |
+| 35 | 0.797 | 0.163 | 0.267 |
+| 85 | 0.820 | 0.237 | 0.273 |
+| 136 | 0.797 | 0.340 | 0.297 |
+
+A different, complementary picture emerges here: under the stricter
+"significant in both independent halves, same sign" criterion, the
+**interaction is the most fragile of the three** at `n_t = 2` (1.3%
+replication vs. ~47-48% for both main effects) -- because it is so rarely
+even significant in the first place with half the already-small sample. So:
+Aim 1's sign-reliability diagnostic (conditional on significance) points to
+`zPCREFp` as the least trustworthy; Aim 2's replication-rate diagnostic
+(unconditional, halved samples) points to the interaction as the most
+fragile overall. Both are real, non-contradictory findings -- they answer
+different practical questions ("if I got a significant result, can I trust
+its sign?" vs. "if I ran this again, would I get the same answer?") -- and
+both indicate `n_t = 2` is inadequate, just via different mechanisms.
+
+The table below defines Aim 2's three discovery/replication diagnostics and
+states exactly how each is computed. All three are derived from
+`combine_replication_p2()`'s per-cell pairing of two independently-fit
+halves (`discovery` and `replication`, each `n_p_total`/`n_t_total` split
+roughly in half by `generate_data_p2_pair()`), using the same Wald-CI
+`excludes_zero` significance criterion as Aim 1, then aggregated by
+`term` x `n_t` (pooled over `n_p` and the 50 replicate pairs/cell).
+
+| Diagnostic | Standard definition | Computed here as |
+|---|---|---|
+| `discovery_rate` | P(significant in an initial/"discovery" sample) -- how often a first look at data of this size turns up a significant result at all, regardless of whether it is subsequently confirmed. | `mean(discovery_significant)`, where `discovery_significant = excludes_zero` evaluated on the **discovery** half alone. |
+| `replication_rate` | Unconditional replication rate: P(significant **and** same-signed in *both* independent halves) -- Marek et al.'s (2022) Fig. 3e-style replication probability. | `mean(replicated)`, where `replicated = excludes_zero_discovery & excludes_zero_replication & sign(estimate_discovery) == sign(estimate_replication)`. Both halves must independently clear the significance threshold *and* agree in sign. |
+| `conditional_replication` | Conditional replication rate: P(replicates \| already significant in the discovery half) -- "given I got a significant result once, would it hold up in an independent second sample?" | `mean(replicated[discovery_significant])`, i.e. `replicated` restricted to rows where the discovery half was already significant. More decision-relevant than the unconditional rate for a researcher who has already observed one significant result, since it factors out the "was it significant even once" question that `discovery_rate` alone answers. |
+
+Note the arithmetic relationship between all three: `replication_rate` is
+mechanically bounded above by `discovery_rate` (a discovery is a
+prerequisite for replication), and `conditional_replication =
+replication_rate / discovery_rate` for any cell where `discovery_rate > 0`
+-- so a low unconditional `replication_rate` can reflect either a low
+`discovery_rate` (rarely significant even once, a power problem) or a low
+`conditional_replication` (often significant once but rarely again, a
+genuine replication-failure problem), and distinguishing these two
+mechanisms is exactly why all three are reported rather than
+`replication_rate` alone (see the discussion of the interaction's `n_t = 2`
+numbers below).
+
+### Aim 2 -- fuller metrics table and visualizations
+
+In addition to the raw replication rate above, the table and figure below
+add the discovery rate and conditional replication rate defined above.
+
+```{r}
+#| label: aim2-full-metrics-table
+
+aim2_metrics_by_nt <- aim2_all |>
+  dplyr::group_by(term, n_t) |>
+  dplyr::summarise(
+    discovery_rate           = mean(discovery_significant, na.rm = TRUE),
+    replication_rate         = mean(replicated, na.rm = TRUE),
+    conditional_replication  = mean(replicated[discovery_significant], na.rm = TRUE),
+    n_fits                   = dplyr::n(),
+    .groups = "drop"
+  )
+
+aim2_metrics_by_nt |>
+  dplyr::arrange(term, n_t) |>
+  knitr::kable(
+    digits = 3,
+    col.names = c("Term", "n_t", "Discovery rate", "Replication rate",
+                  "Conditional replication", "n fits")
+  )
+```
+
+```{r}
+#| label: fig-aim2-metrics-vs-nt
+#| fig-width: 9
+#| fig-cap: "Aim 2: discovery rate, (unconditional) replication rate, and conditional replication rate vs. text sample size, at each term's own empirically-observed effect size."
+
+plot_metrics_vs_x(
+  aim2_metrics_by_nt, x_var = "n_t",
+  metrics = c("discovery_rate", "replication_rate", "conditional_replication"),
+  metric_labels = aim2_metric_labels,
+  x_lab = "Text sample size (n_t, log scale)"
+)
+```
+
+The third panel adds a finding not visible in the unconditional
+replication-rate table alone: conditional on having found a significant
+interaction in the discovery half, the interaction's replication rate (~22%
+at `n_t = 2`, rising to ~70-92% at larger `n_t`) is *lower* than `zHLVA`'s at
+every `n_t` but is **not as catastrophically low** as its unconditional
+replication rate (1.3% at `n_t = 2`) might suggest in isolation -- most of
+that unconditional fragility comes from rarely being significant in the
+discovery half at all (a power problem), rather than from significant
+discoveries failing to hold up (a pure replication problem). Both framings
+matter for different audiences: a reviewer asking "is this literature's
+replication rate adequate" should look at the unconditional rate; a
+researcher who has already observed one significant result and is deciding
+whether to trust it should look at the conditional rate.
+
+```{r}
+#| label: fig-aim2-replication-surface
+#| fig-width: 8
+#| fig-height: 4
+#| fig-cap: "Aim 2: unconditional replication-rate surface across the full joint (n_p, n_t) grid, at each term's own empirically-observed effect size -- the discovery/replication analog of the Aim 1 power surface above."
+
+aim2_surface <- aim2_all |>
+  dplyr::group_by(term, n_p, n_t) |>
+  dplyr::summarise(replication_rate = mean(replicated, na.rm = TRUE), .groups = "drop")
+
+plot_power_heatmap(aim2_surface, fill_var = "replication_rate", fill_label = "Replication\nrate")
+```
+
+Similar to Aim 1's power surface, but stricter, and carrying the same
+`zPCREFp`-specific caveat identified there (numbers checked directly
+against `aim2_surface`). `zHLVA` saturates cleanly on the participant
+margin alone once `n_t >= 10` (100% replication by `n_p = 375`), but at
+`n_t = 2` its replication rate lags well behind -- 54-80% across `n_p =
+375`-1497, never reaching 100% anywhere on this grid -- so halving the
+sample still measurably hurts even the best-behaved term when `n_t = 2`.
+The **interaction** shows the pattern the paragraph above expected:
+replication stays under 5% at every `n_p` when `n_t = 2`, then climbs to
+48-68% once `n_t >= 10` and `n_p >= 1300`, topping out at 68% (`n_p =
+1497`, `n_t = 85` or `136`) -- a real gain from more texts. **`zPCREFp`
+again breaks that expectation**, just as it did for power: its two
+highest replication rates on the entire grid (0.78 and 0.80) both occur
+at `n_t = 2` (`n_p = 1300` and `1497` respectively) -- higher than
+anything it achieves at any larger `n_t`, including the largest-both-
+margins cell (0.64 at `n_p = 1497, n_t = 136`). This is the same
+underpowered-paradox signature carrying over from Aim 1's power surface
+into Aim 2's stricter replication criterion, not a genuine advantage of
+the smallest text sample.
+
+## Aim 1 & Aim 2: discussion
+
+Comparing the two aims' diagnostics side by side clarifies what each is, and
+isn't, telling us:
+
+- **Aim 1** (conditional on significance) says `zPCREFp` is the *least*
+  trustworthy term at `n_t = 2` -- its significant results are the most
+  likely to have the wrong sign.
+- **Aim 2** (unconditional, halved samples) says the **interaction** is the
+  most fragile overall -- not because its significant results are
+  especially untrustworthy, but because it is rarely significant at all
+  once the sample is halved.
+- Both agree that `n_t = 2` -- the modal text sample size in this project's
+  literature review (Phase 1's overlay finding: ~95% of reviewed studies
+  fall outside the trustworthy region) -- is inadequate for any of the
+  three effects, via different mechanisms depending on which question is
+  asked.
+- `zHLVA`, the sole participant-level effect among the three, is
+  comparatively well-behaved on both diagnostics and saturates on the
+  participant margin alone, independent of text sample size -- consistent
+  with Phase 1's finding that participant-margin effects are far less
+  sensitive to this project's chronic text-sample scarcity than text-margin
+  effects are. This is now visible on every diagnostic in this document
+  (the fuller metrics table's explicit Type I column, the reordered power
+  surface/curves, and the three-panel funnel plot), not just the original
+  sign-reliability/power comparison -- the general pattern (text-margin
+  terms behave qualitatively differently from the participant-margin term,
+  regardless of which specific error-taxonomy diagnostic is examined) holds
+  up consistently, which is itself the more general finding this
+  restructured document is built to surface.
+
+A full cross-aim synthesis, tying these findings together with Aims 3-6
+(random-effects misspecification, variance-component sensitivity, slope/
+covariance recovery, and design remedies), will appear once those aims have
+their own reporting-ready documents.
+
+## Flagged future work
+
+- **The significance-threshold/multiple-comparisons sweep** (Marek et al.'s
+  P<0.05-to-Bonferroni comparison) was explicitly deferred at the design
+  stage, given the real core model's 26-term fixed-effects formula. Aim 1/2
+  above use a single 95%-CI-based threshold throughout; whether Aim 1's
+  error-rate findings hold up under a stricter multiple-comparisons
+  correction remains untested.
+- **Extension decisions** (recorded after discussion with the user; none
+  implemented in this pass -- see `cost-estimate-expanded-grid-replicates-aims1-2-PLAN.qmd`
+  for the full cost-estimation method and all six candidate scenarios; the
+  ones referenced by the decisions below are summarized here so this
+  document is self-contained). All scenarios assume the same 4-worker
+  `furrr` setup and 3 sweeps x 5 effect values x 3 fits/replicate as the
+  current run; scale factor and wall-clock are relative to/estimated from
+  the achieved 67,500-fit, ~5h baseline (Scenario 0):
+
+All seven scenarios from the source document are listed below, for
+completeness. Scenarios 1-3 (greyed out) are not referenced by name in
+the decisions that follow -- they sit between Scenario 0 and Scenario 4 in
+both cost and scope, and were superseded by the bundled Scenario 4+5
+decision below rather than chosen individually.
+
+  | Scenario | Change | Total fits | Scale factor | Est. wall-clock (4 workers) |
+  |---|---|---|---|---|
+  | 0 (baseline, achieved) | Current 6x5 `n_p`/`n_t` grid, 50 replicates/cell | 67,500 | 1.0x | ~5h |
+  | <span style="color:grey">1</span> | <span style="color:grey">Replicates 50->100 only</span> | <span style="color:grey">135,000</span> | <span style="color:grey">2.0x</span> | <span style="color:grey">~10h</span> |
+  | <span style="color:grey">2</span> | <span style="color:grey">Densify `n_p` only: 6->10 values (add log-spaced midpoints), `n_t` unchanged</span> | <span style="color:grey">112,500</span> | <span style="color:grey">1.67x</span> | <span style="color:grey">~8.3h</span> |
+  | <span style="color:grey">3</span> | <span style="color:grey">Densify `n_t` only: 5->9 values, `n_p` unchanged</span> | <span style="color:grey">121,500</span> | <span style="color:grey">1.8x</span> | <span style="color:grey">~9h</span> |
+  | 4 | Densify both margins (~doubling each): `n_p` 6->11 values, `n_t` 5->9 values | 222,750 | 3.3x | ~16.5h |
+  | 5 | Scenario 4 + replicates 50->100 in the same run | 445,500 | 6.6x | ~33h |
+  | 6 | Scenario 4, plus extend the range upward beyond this project's real N (e.g. add `n_p` = 3000/5000, `n_t` = 200/300) | ~290,000-335,000 | ~4.3-5x | **now reliably extrapolable (benchmarked below)**: ~0.06 sec/1,000 rows, no superlinear penalty detected |
+
+  1. **Densify both margins of the `n_p`/`n_t` grid** (Scenario 4, ~3.3x
+     cost) **and increase replicates from 50 to 100 in the same run**
+     (bundled with densification per the user's preference, rather than as
+     a separate job) -- together, this is Scenario 5 in the cost-estimate
+     document: ~445,500 fits, ~33h wall-clock on 4 workers, ~132
+     core-hours. This becomes the next full-grid run superseding the
+     current 30-cell/50-replicate results once launched.
+  2. **Extending the sample-size range beyond this project's real N**
+     (Scenario 6 above; e.g. `n_p` = 3000/5000, `n_t` = 200/300) is not
+     ruled out, and the benchmark the user asked for (a handful of single
+     fits at candidate large `n_p`/`n_t` values) has now been run --
+     summarized below -- resolving the "not reliably extrapolable"
+     uncertainty. Whether to commit to a full Scenario 6 run remains a
+     separate, still-open decision; this benchmark only removes the cost
+     uncertainty, not the decision itself.
+
+::: {.callout-note}
+## Scenario 6 benchmark (completed)
+
+6 candidate cells at the proposed extremes (`n_p` up to 5000, `n_t` up to
+300), 2 replicates each, `"correct"` RE spec, timed with the same
+`generate_data_p2()`/`fit_model_p2()` helpers used throughout this
+document (full detail and the underlying findings are in
+`cost-estimate-expanded-grid-replicates-aims1-2-PLAN.qmd`'s "Scenario 6
+benchmark" section):
+
+| Cell | `n_p` | `n_t` | Rows | Mean fit time | Status |
+|---|---|---|---|---|---|
+| Text-margin only | 1497 | 200 | 59,880 | 2.93s | clean, both reps |
+| Text-margin only | 1497 | 300 | 59,880 | 3.50s | clean, both reps |
+| Participant-margin only | 3000 | 136 | 120,000 | 7.18s | clean, both reps |
+| Participant-margin only | 5000 | 136 | 200,000 | 12.18s | clean, both reps |
+| Both margins | 3000 | 300 | 120,000 | 7.65s | clean, both reps |
+| Both margins (max) | 5000 | 300 | 200,000 | 11.68s | clean, both reps |
+
+All 12 fits converged cleanly (no singular fits, optimizer warnings, or
+timeouts). Fit time normalizes to **0.049-0.064 sec per 1,000 rows**
+(mean 0.058) across every cell -- matching the existing baseline's implied
+rate (0.059 sec/1,000 rows) almost exactly, with no evidence that fitting
+gets disproportionately harder at very large `n_p`/`n_t`. A second,
+practically useful finding: because `generate_data_p2()` caps each
+participant at `k = min(10, n_texts)` assigned texts, extending `n_t`
+*alone* past 10 adds no rows and costs essentially nothing extra (the
+`n_t = 200`/`300` cells cost the same as the existing `n_t = 136`
+baseline at matched `n_p`) -- only extending `n_p`, or adding more
+texts-per-participant, increases cost.
+
+As one concrete illustration: a dedicated sweep restricted to just these 6
+cells, at the existing Aims 1-2 structure (3 sweeps x 5 effect values x 50
+replicates/cell), would cost ~9.4h serial / ~2.4h on 4 workers (Aim 1
+only, 4,500 fits) or ~28.2h serial / ~7.0h on 4 workers (full Aim 1 + Aim
+2 structure, 13,500 fits, upper-bound estimate). A full densified-and-
+extended Scenario 6 grid (the original "~130-150 cells" estimate) can now
+be costed with the same confidence as Scenarios 1-4 via `rows x 0.06 /
+1000` seconds per fit, once a specific grid is chosen.
+:::
+  3. **A dedicated `b_intercept` sweep** was judged worth scoping as its
+     own small follow-up study to check whether logistic regression's
+     non-collapsibility makes the text-margin instability findings above
+     sensitive to this project's unusually high (~89%) baseline accuracy.
+     It has since been designed and costed in full (see
+     `cost-estimate-b-intercept-sweep-PLAN.qmd`), summarized here:
+
+     ::: {.callout-note}
+     ## `b_intercept` sweep design and cost (run)
+
+     A 5-point one-at-a-time sweep over target baseline accuracies (0.50,
+     0.65, 0.80, **0.89 -- observed**, 0.95, i.e. `b_intercept` = 0, 0.619,
+     1.386, 2.093, 2.944), holding the three focal effect sizes at their
+     empirically-observed values, at **4 representative cells** rather
+     than the full 30-cell grid: the existing small (25, 2), moderate
+     (375, 35), and large (1497, 136) benchmark cells, plus a new
+     `n_t = 2` pathology cell at large `n_p` (1497, 2) -- benchmarked
+     specifically for this plan at 0.78s/fit (mean of 2 reps, both
+     `converged_singular`) -- chosen to isolate whether the text-margin
+     identifiability breakdown itself is intercept-sensitive. Aim 1
+     diagnostics only (no discovery/replication split), 50 replicates/
+     cell: **1,000 total fits, ~22 minutes serial, ~5.6 minutes
+     wall-clock on 4 workers** -- cheap enough to run interactively, no
+     background job needed. A design check run as part of this planning
+     pass found the simulated data's actual mean response rate runs
+     1-2 percentage points below the naive `plogis(b_intercept)` target
+     at every grid point (expected, from the same non-collapsibility/
+     Jensen's-inequality logic this sweep investigates) -- the achieved,
+     not nominal, baseline should be reported in any write-up.
+     :::
+
+     The sweep was subsequently run in full; see "`b_intercept` sweep:
+     results" below (its own top-level section, placed after this list,
+     since its code chunk did not nest cleanly inside this indented
+     callout/list structure).
+- **The shareable self-contained workflow** (a standalone `.R` process
+  script + bash runner, updated generation/visualization tutorials sourcing
+  from it, and a final trimmed reporting document) is planned as a
+  follow-on piece of work once the extension decisions above are settled,
+  so that any new grid only needs to be run once against the final
+  pipeline.
+
+Aims 3-6's own flagged-future-work items (Aim 3's `brms` spot-checks, Aim
+4's flat interaction-CI-width finding, Aim 5's deferred joint
+correlation x variance sweep, Aim 6's remedy-specific follow-ups, and the
+`furrr` load-imbalance engineering note) are unchanged and documented in
+`phase2-effect-variance-misspecification.qmd`; they will surface again in
+their own future documents rather than being duplicated here.
+
+## `b_intercept` sweep: results
+
+The sweep designed and costed above (design summary: "`b_intercept`
+sweep design and cost" callout in "Flagged future work") was run (script:
+`run_b_intercept_sweep.R`) -- **sequentially rather than with `furrr`'s 4
+workers**, given the real memory pressure this machine was found to be
+under when this sweep was designed (swap ~87% full at the time); actual
+runtime was **20.7 minutes** (vs. the ~5.6-minute parallel estimate),
+still cheap enough to run interactively. Results are saved to
+`results_phase2/aim1_intercept_sweep.rds` (1,000 fits x 3 terms = 3,000
+rows) and loaded directly below, not recomputed.
+
+See `cost-estimate-b-intercept-sweep-PLAN.qmd` for the fuller design,
+execution, and results write-up (including the same findings below in
+more detail, a projected-vs-achieved cost comparison, and the follow-on
+"Scenario 5 + intercept variation" work this sweep's findings motivated).
+
+```{r}
+#| label: fig-b-intercept-sweep-results
+#| fig-width: 9
+#| fig-height: 6
+#| fig-cap: "b_intercept sweep: power vs. target baseline accuracy, by representative cell and term. Vertical dotted line marks this project's real, observed baseline (~89%)."
+
+intercept_sweep_results <- readRDS("results_phase2/aim1_intercept_sweep.rds")
+
+intercept_sweep_summary <- intercept_sweep_results |>
+  dplyr::group_by(label, n_p, n_t, target_accuracy, term) |>
+  dplyr::summarise(
+    power            = mean(excludes_zero, na.rm = TRUE),
+    sign_reliability = mean(correct_sign, na.rm = TRUE),
+    type_s_rate      = mean(sign_error[excludes_zero], na.rm = TRUE),
+    type_m_ratio     = median(inflation_ratio[excludes_zero], na.rm = TRUE),
+    coverage         = mean(covers_truth, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  dplyr::mutate(cell_label = paste0(label, " (n_p=", n_p, ", n_t=", n_t, ")"))
+
+ggplot(intercept_sweep_summary, aes(x = target_accuracy, y = power, color = term)) +
+  geom_vline(xintercept = 0.890, linetype = "dotted", color = "grey40") +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~cell_label, scales = "free_y") +
+  scale_color_brewer(palette = "Dark2") +
+  labs(x = "Target baseline accuracy (plogis(b_intercept))", y = "Power", color = "Term") +
+  theme_minimal()
+```
+
+**Headline finding: power for all three effects generally declines as
+baseline accuracy rises toward this project's real ~89% value**, most
+clearly for the interaction and `zPCREFp` -- confirming the concern that
+motivated this sweep. At the "moderate" cell (n_p=375, n_t=35), the
+interaction's power declines close to monotonically from 84% (50%
+accuracy) to 28% (95% accuracy); at the "small" cell (n_p=25, n_t=2),
+`zHLVA`'s power declines from 32% to 6% over the same range. The `n_t =
+2` pathology cell's Type S rate for `zPCREFp` also *worsens* toward
+higher accuracy (36% -> 55% wrong-sign-given-significant), as does its
+Type M ratio (4.2x -> 7.5x) -- so the text-margin identifiability
+breakdown documented throughout the main part of this document is not
+merely co-occurring with this project's high baseline accuracy, it is
+measurably *exacerbated* by it.
+
+**A specific mechanistic finding, investigated directly**: at the
+"large" cell (n_p=1497, n_t=136), the interaction's power looks like it
+drops suddenly -- a flat 100% from 50-89% accuracy, then a step down to
+78% only at the most extreme point (95%) -- which could look like a
+discontinuity or an artifact. Inspecting the underlying per-replicate
+`estimate/std.error` ratios shows this is not a sudden change in the
+data-generating mechanism: the median ratio declines smoothly and
+continuously across the *entire* sweep (5.70 -> 5.58 -> 4.92 -> 3.73 ->
+2.86), and so does the minimum (3.26 -> 3.25 -> 2.53 -> 2.05 -> 1.17).
+What changes abruptly is only whether that smooth decline crosses the
+fixed 95%-significance threshold (a ratio of 1.96): because the starting
+margin at 50% accuracy is generous (median ratio ~5.7, nearly 3x the
+threshold), it takes until the most extreme grid point for enough
+replicates' ratios to dip below 1.96 (11 of 50 do, at 95% accuracy; zero
+do at every lower level, including 89%, where the *minimum* ratio was
+already down to 2.05 -- a near miss). This is a textbook case of a
+smoothly-varying quantity producing an apparently sudden change in a
+*thresholded* summary (power) -- compounded by a genuine, accelerating
+increase in standard error as the baseline approaches the ceiling: mean
+SE rises from 0.0095 to 0.0174 across the sweep, and the *rate* of
+increase itself accelerates (successive ratios 1.02x, 1.14x, 1.22x,
+1.30x), loosely tracking the Fisher-information-style prediction that
+variance in a Bernoulli outcome scales with `1/(p(1-p))` (a naive
+`1/sqrt(p(1-p))` calculation predicts a 2.29x relative SE increase from
+50% to 95% accuracy; the observed increase, 1.83x, is smaller, plausibly
+buffered by the participant/text random-effects variance components, but
+points the same direction). This prediction -- that a denser grid near
+the top of the accuracy range would reveal a smooth decline rather than
+a true discontinuity at exactly 95% -- was tested directly (see
+"Follow-up: ceiling-densification check" immediately below) and
+confirmed.
+
+### Follow-up: ceiling-densification check (confirmed)
+
+Two more intercept values, 92% and 97% target accuracy, were added at
+the same 4 cells and 50 replicates/cell (script:
+`run_b_intercept_sweep_ceiling_extension.R`; 400 additional fits, 8.7
+minutes serial), specifically to test the smooth-decline prediction
+above. Results are saved separately
+(`results_phase2/aim1_intercept_sweep_ceiling_extension.rds`) and
+combined with the original sweep below.
+
+```{r}
+#| label: fig-b-intercept-ceiling-extension
+#| fig-width: 9
+#| fig-height: 6
+#| fig-cap: "b_intercept sweep with ceiling densification: power vs. target baseline accuracy, by representative cell and term, now at 7 accuracy points (adding 92% and 97% to the original 5). Vertical dotted line marks this project's real, observed baseline (~89%)."
+
+intercept_sweep_ceiling_ext <- readRDS("results_phase2/aim1_intercept_sweep_ceiling_extension.rds")
+
+intercept_sweep_combined <- dplyr::bind_rows(intercept_sweep_results, intercept_sweep_ceiling_ext)
+
+intercept_sweep_combined_summary <- intercept_sweep_combined |>
+  dplyr::group_by(label, n_p, n_t, target_accuracy, term) |>
+  dplyr::summarise(power = mean(excludes_zero, na.rm = TRUE), .groups = "drop") |>
+  dplyr::mutate(cell_label = paste0(label, " (n_p=", n_p, ", n_t=", n_t, ")"))
+
+ggplot(intercept_sweep_combined_summary, aes(x = target_accuracy, y = power, color = term)) +
+  geom_vline(xintercept = 0.890, linetype = "dotted", color = "grey40") +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~cell_label, scales = "free_y") +
+  scale_color_brewer(palette = "Dark2") +
+  labs(x = "Target baseline accuracy (plogis(b_intercept))", y = "Power", color = "Term") +
+  theme_minimal()
+```
+
+**Confirmed**: at the "large" cell, the interaction's power across all 7
+points is 100%, 100%, 100%, 100%, **92%, 78%, 68%** (50%/65%/80%/89%/
+**92%/95%/97%** accuracy) -- a smooth, monotonic decline once the two
+new points fill in the gap, not a discontinuity at exactly 95%. The
+underlying `estimate/std.error` ratios decline just as smoothly across
+all 7 points (median: 5.70, 5.58, 4.92, 3.73, **3.31, 2.86, 2.32**;
+minimum: 3.26, 3.25, 2.53, 2.05, **1.31, 1.17, 0.297**), and mean SE
+keeps rising with the same accelerating pattern (0.0095, 0.0097, 0.0110,
+0.0134, **0.0146, 0.0174, 0.0221**). The same pattern generalizes beyond
+the one cell originally flagged: the "moderate" cell's interaction power
+also continues declining smoothly past the original grid's endpoint,
+from 48% (89%) down to 36%, 28%, and 22% at 92%/95%/97% accuracy. The
+apparent "cliff" in the original 5-point grid was, as predicted, a grid-
+sparsity artifact rather than a true discontinuity -- confirming that
+this project's underpowered-paradox-adjacent findings do not depend on a
+sudden qualitative change happening to fall near the observed baseline;
+the underlying erosion is continuous and only *looks* abrupt because of
+where the significance threshold happens to sit relative to a sparse
+grid.
+
+**Interpretation**: this project's own real baseline accuracy (~89%)
+sits close enough to the region where these effects begin measurably
+eroding that the main Aims 1-2 document's findings should be read as
+somewhat conservative, not baseline-independent -- a comprehension test
+with a more moderate pass rate would likely show *better* power and
+*less* severe Type S/M error for the same underlying effect sizes, not
+worse.
+
+::: {.callout-note collapse="true"}
+## Development history (collapsed -- process detail, not reportable findings)
+
+This section preserves the process/decision narrative that accompanied the
+original build of Aims 1-2, condensed from `phase2-effect-variance-misspecification-PLAN.qmd`
+and `phase2-effect-variance-misspecification.qmd`. Nothing in this section
+is required to understand the results above; it documents how they were
+produced.
+
+### Relationship to existing project simulation infrastructure
+
+This work explicitly reused conventions already established in
+`simulation_study_complete.qmd` (Simulations 1, 2, 3, 4, and 6) and
+`power-simulation-vocabulary-cohesion.qmd`, rather than inventing new ones:
+
+- **One-at-a-time sweeps, not a full factorial.** Existing simulations vary
+  one dimension (effect size, a single variance component, or a single
+  intercept-slope correlation) at a time while holding others fixed at a
+  realistic value, to avoid combinatorial explosion. Phase 2 follows the
+  same pattern (six aims, altogether) rather than crossing effect size x
+  variance x covariance x misspecification x design strategy x
+  two-dimensional sample size all at once.
+- **Fitting**: `glmer` (fast) as the sweep workhorse, with `brms`
+  spot-checks at a handful of cells using the project's precompile-once,
+  `update()`-per-replicate pattern to avoid Stan recompilation cost across
+  replicates (not run for Aims 1-2 specifically; see flagged future work).
+- **Parallelization**: `furrr::future_pmap_dfr()` with `multisession`,
+  `furrr_options(seed = TRUE)`, hierarchical seeds, 4 workers with a
+  `setTimeLimit()` guard, following Phase 1's memory-safety lessons.
+- **Outcome-quality classification**: converged-clean / converged-singular
+  / optimizer-warning / error, reused verbatim from Phase 1's helper
+  functions.
+
+### Confirmed decisions (made before building Aims 1-2)
+
+1. **Scope**: all six aims cover **three effects** -- `zHLVA` (main),
+   `zPCREFp` (main), and `zHLVA:zPCREFp` (interaction) -- rather than the
+   interaction alone.
+2. **Aim 2 split axis**: left configurable (`split_margin =
+   "participants_only"` vs. `"both"`) rather than fixed; both variants can
+   be run and compared. The results above use `"participants_only"`.
+3. **Significance-threshold sweep**: deferred (see "Flagged future work").
+4. **Pacing**: build and review Aim 1 (together with Aim 2) first, as the
+   more traditional power-analysis-style starting point extended with the
+   replication-split question.
+5. **Replicate count**: 50 resamples/cell, matching Phase 1 Step 3's
+   memory-safe, coarsened configuration.
+
+### Timing benchmark
+
+A small number of representative cells (small/moderate/large) were timed
+once each for the `"correct"` and `"misspecified"` RE specifications (the
+two used by Aims 1-3), before committing to the full grid:
+
+| Cell | n_p | n_t | `correct` | `misspecified` |
+|---|---|---|---|---|
+| small | 25 | 2 | 0.34s (singular) | 0.03s (clean) |
+| moderate | 375 | 35 | 0.71s (clean) | 0.30s (clean) |
+| large | 1497 | 136 | 3.53s (clean) | 1.43s (clean) |
+
+Mean per-fit time across these three cells (a rough, order-of-magnitude
+estimate, not a proper average over the full grid's cell-size
+distribution): `correct` ~1.53s, `misspecified` ~0.59s. (The original
+benchmark also timed a `"full_slopes"` arm for Aim 5's covariance sweep,
+using reference slope-variance/correlation values extracted from the fitted
+core model; that arm is out of scope for this Aims-1/2-only document and is
+reported instead in the Aim 5 document.)
+
+Extrapolated cost: Aim 1 (22,500 fits, `correct` spec) ~9.6h serial / ~2.4h
+on 4 workers; Aim 2 (~22,500 fits, `correct` spec) ~9.6h serial / ~2.4h
+parallel. Combined, each `(sweep, effect_value, n_p, n_t, rep)` combination
+triggers **three** `glmer` fits (one Aim 1 full-sample fit, plus Aim 2's
+discovery and replication half-sample fits): 3 sweeps x 5 effect values x 30
+cells x 50 reps = 22,500 combinations x 3 fits = **67,500 total fits**,
+estimated at ~20h serial / ~5h on 4 parallel workers.
+
+### Validation: small-scale smoke test
+
+Before committing to the full grid, the pipeline was validated on a 24-cell
+subset (2 effect values x 2 participant Ns x 2 text Ns x 3 reps, interaction
+sweep only, at small sample sizes). Kept live here (cheap, ~6 seconds) as a
+lightweight regression check that `generate_data_p2()`/`fit_model_p2()`
+above still behave as expected.
+
+```{r}
+#| label: aim1-aim2-smoke-test
+#| cache: true
+
+smoke_grid <- tidyr::crossing(
+  sweep = "interaction",
+  effect_value = c(0, 0.054),
+  n_p = c(25, 100),
+  n_t = c(2, 10),
+  rep = 1:3
+)
+
+smoke_results <- purrr::pmap(smoke_grid, run_aim1_aim2_cell)
+aim1_smoke <- purrr::map_dfr(smoke_results, "aim1")
+aim2_smoke <- purrr::map_dfr(smoke_results, "aim2")
+```
+
+```{r}
+#| label: aim1-aim2-smoke-test-check
+
+aim1_smoke |> dplyr::filter(term == "zHLVA:zPCREFp") |>
+  dplyr::select(n_p, n_t, effect_value, rep, estimate, ci_lower, ci_upper,
+                excludes_zero, correct_sign, status)
+
+aim2_smoke |> dplyr::filter(term == "zHLVA:zPCREFp") |>
+  dplyr::select(n_p, n_t, effect_value, rep, discovery_significant, replicated,
+                status_discovery, status_replication)
+```
+
+The pipeline ran the 24-cell subset in ~5.6 seconds and produced sensible,
+correctly-structured output for both Aim 1 (per-term bias/CI/sign
+diagnostics) and Aim 2 (discovery/replication agreement) -- singular fits
+were common at these smallest cells (`n_p = 25`, `n_t = 2`), as expected.
+
+### Cost note and launch record
+
+The full grid was not run interactively. It was launched as a detached
+background process (`run_aim1_aim2_full.R`), one sweep at a time (`hlva`,
+`pcref`, `interaction`), using `furrr::plan(multisession, workers = 4)`. All
+three sweeps finished in ~99-101 minutes each (~5h total on 4 parallel
+workers, matching the benchmark-derived estimate closely). Results were
+saved to `results_phase2/aim{1,2}_{sweep}.rds` and are what this document
+loads above.
+:::
+
+## Follow-up note
+
+The DGP and fitting code above (`generate_data_p2()`, `fit_model_p2()`,
+`generate_data_p2_pair()`, `run_aim1_aim2_cell()`) is kept live in this
+document, unmodified from the version used to produce the saved results, so
+it can be inspected and -- in a future, separate turn -- modified if
+specific changes turn out to be informative. No new simulation runs have
+been made in this pass; any modification to this code that would justify a
+new full-grid run (a multi-hour, background-job undertaking) should be
+discussed and scoped before being launched.

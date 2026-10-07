@@ -1,0 +1,763 @@
+---
+title: "Tutorial: the Aims 1-2 synthetic-data simulation pipeline"
+subtitle: "How the data behind the power / error-rate / replication figures is generated, walked through piece by piece"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+    embed-resources: true
+    code-fold: false
+execute:
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## What this document is (and isn't)
+
+This is a **teaching walk-through** of the simulation/analysis pipeline
+behind `synthetic-data-analyses-power-error-replication-aims-1-2-draft.qmd`
+(Aims 1-2 of the Phase 2 parametric simulation program). It extracts every
+piece of code and commentary needed to understand **how the input data for
+that document's tables and figures is produced** -- the data-generating
+function, the model-fitting logic, the sample-size/effect-size grids, and
+the per-cell orchestration that ties them together -- stopping exactly where
+that data becomes ready to plot.
+
+It deliberately does **not** cover: the actual visualization code (`ggplot`
+calls, plotting helpers), the substantive findings/discussion, or the
+small-scale smoke test used to validate the pipeline before the full run
+(that smoke test *is* a nice minimal worked example if you want to run this
+code yourself interactively -- see the closing note).
+
+Code below is reproduced verbatim from the source document (function names,
+defaults, and comments unchanged) so it can be cross-checked directly
+against it.
+:::
+
+## The big picture
+
+Aims 1-2 answer: *if we knew the true effect sizes and variance components
+exactly, how would our ability to detect and correctly characterize three
+specific effects (`zHLVA`, `zPCREFp`, their interaction) change with
+participant sample size, text sample size, and the size of the effect
+itself?* Answering this requires, for many different combinations of
+"true" parameter values and sample sizes:
+
+1. **Simulate** a synthetic dataset with those exact, known-true properties.
+2. **Fit** the same statistical model a real analysis would use.
+3. **Classify** the fit's outcome against the known truth (right sign? CI
+   excludes zero? how far off is the estimate?).
+4. **Repeat** many times (replicates) per combination, and repeat across
+   every combination in the design.
+
+The rest of this document walks through the code that does exactly that, in
+the order a reader would need to understand it.
+
+## Step 1: packages
+
+```{r}
+#| label: setup
+
+library(tidyverse)
+library(lme4)
+```
+
+Only two packages are needed for the *generation* side of the pipeline:
+`tidyverse` (for `dplyr`/`tidyr` data wrangling and `purrr::map`/`pmap` for
+iterating over grids) and `lme4` (`glmer`, for fitting the mixed-effects
+logistic regression models). Everything downstream of this point works with
+plain R and these two packages -- no modeling-specific niceties are needed
+until the visualization stage, which is out of scope here.
+
+## Step 2: the data-generating function
+
+The core building block is a function that, given a set of "true" parameter
+values and sample sizes, simulates one complete synthetic dataset that
+looks like the real study's data structure: participants, each answering
+multiple-choice questions about several texts, with a known true effect of
+participant vocabulary (`zHLVA`) and text cohesion (`zPCREFp`), plus their
+interaction, on accuracy.
+
+```{r}
+#| label: generate-data-p2
+
+generate_data_p2 <- function(
+    n_participants = 200,
+    n_texts        = 20,
+    k              = min(10, n_texts),
+    questions_per_text = 4,
+    b_intercept    = 2.093,
+    b_hlva         = 0.363,
+    b_pcref        = 0.095,
+    b_interaction  = 0.054,
+    sd_participant = 0.69,
+    sd_text        = 0.41,
+    sd_pcref_slope = 0,
+    sd_hlva_slope  = 0,
+    cor_part       = 0,
+    cor_text       = 0,
+    cohesion_design = c("natural", "widened"),
+    reliability_hlva = 1,
+    reliability_pcref = 1,
+    seed           = NULL
+) {
+  cohesion_design <- match.arg(cohesion_design)
+  if (!is.null(seed)) set.seed(seed)
+  k <- min(k, n_texts)
+
+  # Participant-level random effects: intercept + zPCREFp slope (correlated) -- Aim 5
+  Sigma_part <- matrix(
+    c(sd_participant^2, cor_part * sd_participant * sd_pcref_slope,
+      cor_part * sd_participant * sd_pcref_slope, sd_pcref_slope^2),
+    nrow = 2
+  )
+  re_part <- if (sd_pcref_slope > 0) {
+    MASS::mvrnorm(n_participants, mu = c(0, 0), Sigma = Sigma_part)
+  } else {
+    cbind(rnorm(n_participants, 0, sd_participant), 0)
+  }
+
+  # zHLVA measurement reliability -- Aim 6 strategy E; reliability_hlva = 1
+  # (default) reproduces the exact prior behavior used in Aims 1-5.
+  zHLVA_true <- rnorm(n_participants, 0, 1)
+  zHLVA_obs  <- sqrt(reliability_hlva) * zHLVA_true +
+    sqrt(1 - reliability_hlva) * rnorm(n_participants, 0, 1)
+
+  participants <- tibble(
+    participant_id = 1:n_participants,
+    zHLVA          = zHLVA_true,
+    zHLVA_obs      = zHLVA_obs,
+    u_participant  = re_part[, 1],
+    s_pcref        = re_part[, 2]
+  )
+
+  # Text-level random effects: intercept + zHLVA slope (correlated) -- Aim 5
+  Sigma_text <- matrix(
+    c(sd_text^2, cor_text * sd_text * sd_hlva_slope,
+      cor_text * sd_text * sd_hlva_slope, sd_hlva_slope^2),
+    nrow = 2
+  )
+  re_text <- if (sd_hlva_slope > 0) {
+    MASS::mvrnorm(n_texts, mu = c(0, 0), Sigma = Sigma_text)
+  } else {
+    cbind(rnorm(n_texts, 0, sd_text), 0)
+  }
+
+  # zPCREFp sampling design -- Aim 6 strategy D (widened cohesion range) --
+  # and measurement reliability -- Aim 6 strategy E.
+  zPCREFp_true <- if (cohesion_design == "widened") {
+    rep(c(-1.5, 1.5), length.out = n_texts) + rnorm(n_texts, 0, 0.3)
+  } else {
+    rnorm(n_texts, 0, 1)
+  }
+  zPCREFp_obs <- sqrt(reliability_pcref) * zPCREFp_true +
+    sqrt(1 - reliability_pcref) * rnorm(n_texts, 0, 1)
+
+  texts <- tibble(
+    text_id  = 1:n_texts,
+    zPCREFp  = zPCREFp_true,
+    zPCREFp_obs = zPCREFp_obs,
+    u_text   = re_text[, 1],
+    s_hlva   = re_text[, 2]
+  )
+
+  assignments <- tibble(participant_id = 1:n_participants) |>
+    dplyr::mutate(assigned = purrr::map(participant_id,
+                          ~ sample(1:n_texts, size = k, replace = FALSE))) |>
+    tidyr::unnest(assigned) |>
+    dplyr::rename(text_id = assigned)
+
+  assignments |>
+    dplyr::left_join(participants, by = "participant_id") |>
+    dplyr::left_join(texts,        by = "text_id") |>
+    dplyr::slice(rep(1:dplyr::n(), each = questions_per_text)) |>
+    dplyr::mutate(
+      question_id = rep(1:questions_per_text, times = dplyr::n() / questions_per_text),
+      eta = b_intercept +
+        (b_hlva  + s_hlva)  * zHLVA +
+        (b_pcref + s_pcref) * zPCREFp +
+        b_interaction * zHLVA * zPCREFp +
+        u_participant + u_text,
+      prob     = plogis(eta),
+      response = rbinom(dplyr::n(), 1, prob)
+    ) |>
+    dplyr::mutate(zHLVA_fit = zHLVA_obs, zPCREFp_fit = zPCREFp_obs) |>
+    dplyr::select(participant_id, text_id, question_id,
+                  zHLVA = zHLVA_fit, zPCREFp = zPCREFp_fit, response)
+}
+```
+
+Walking through this piece by piece:
+
+**a. Arguments and their defaults (lines defining the signature).** Every
+"true" quantity the simulation needs is a function argument with a default
+equal to this project's real, empirically-estimated value (e.g.
+`b_hlva = 0.363` is the real fitted `zHLVA` coefficient). This is
+deliberate: calling `generate_data_p2()` with no arguments reproduces the
+"realistic" scenario, and any Aim-specific sweep just overrides the one or
+two arguments it cares about (e.g. Aim 1 overrides `b_hlva`/`b_pcref`/
+`b_interaction`; Aim 6 overrides `cohesion_design`/`reliability_hlva`).
+`sd_pcref_slope`, `sd_hlva_slope`, `cor_part`, `cor_text` default to zero --
+they only matter for Aim 5's richer random-slopes design, so Aims 1-2 never
+touch them and effectively get a simpler random-**intercepts**-only model.
+
+**b. Participant-level random effects.** `Sigma_part` is a 2x2
+variance-covariance matrix for a participant's random intercept and (Aim
+5-only) random `zPCREFp` slope. When `sd_pcref_slope = 0` (Aims 1-2's case),
+building this correlated bivariate draw would be wasted work and
+numerically fragile (a rank-deficient covariance matrix), so the code
+branches: if there's no slope variance, it just draws ordinary independent
+normal random intercepts (`rnorm`) and hard-codes the slope column to zero.
+`MASS::mvrnorm()` (correlated bivariate normal draws) is only reached when
+Aim 5 actually asks for slope variation.
+
+**c. `zHLVA` and measurement reliability.** Every participant gets a "true"
+`zHLVA` value drawn from a standard normal. `zHLVA_obs` is a
+reliability-attenuated version: `reliability_hlva = 1` (the Aims 1-2
+default) makes `zHLVA_obs` identical to `zHLVA_true`; a value below 1 (used
+only in Aim 6's measurement-reliability strategy) blends in independent
+noise, simulating an imperfect vocabulary test.
+
+**d. Assembling the `participants` tibble.** One row per participant,
+carrying both the true and observed `zHLVA`, plus the random-intercept/slope
+draws from (b).
+
+**e-g. Mirror image for texts.** Steps (e) text-level random effects, (f)
+`zPCREFp`'s true value (with an optional "widened" sampling design used only
+by Aim 6, which spaces cohesion values at two extremes rather than sampling
+them continuously) and its own reliability attenuation, and (g) assembling
+the `texts` tibble, all repeat the same logic as (b)-(d) with participant
+and text swapped.
+
+**h. Crossing participants with texts.** Real participants don't read every
+text -- each is assigned a random subset of `k` texts (default: up to 10,
+clamped to however many texts actually exist in this run, since a run with
+`n_texts = 2` can't give every participant 10 distinct texts). `purrr::map`
+draws one random sample of text IDs per participant, and `tidyr::unnest()`
+turns that list-column into one row per (participant, assigned text) pair.
+
+**i. Expanding to the question level.** The real outcome (`response`) is
+recorded per-question, not per-text (each text has multiple comprehension
+questions). `dplyr::slice(rep(..., each = questions_per_text))` duplicates
+every participant-text row `questions_per_text` (default 4) times, and a
+repeating `1:questions_per_text` sequence labels which question each
+duplicate represents.
+
+**j. The actual data-generating step.** `eta` is the model's linear
+predictor on the logit scale: an intercept, the `zHLVA` and `zPCREFp` main
+effects (each augmented by that participant's or text's own random slope,
+which is zero for Aims 1-2), the fixed interaction term, and the
+participant's and text's random intercepts. `plogis(eta)` converts that to
+a probability, and `rbinom(..., 1, prob)` draws the actual 0/1 `response`
+-- this is the only genuinely random step tied to the *outcome* itself
+(everything upstream generates covariates and random effects; this line is
+where "did this participant get this question right" is actually decided).
+
+**k. Final selection: true vs. observed covariates.** The very last
+`mutate()`/`select()` swaps in the (possibly reliability-attenuated)
+*observed* `zHLVA`/`zPCREFp` values as what the fitted model will see, while
+`eta` was computed from the *true* values. When `reliability_* = 1` (Aims
+1-2), these are identical and this distinction is invisible; the separation
+exists so Aim 6's measurement-reliability strategy can reuse this same
+function unmodified.
+
+::: {.callout-tip}
+**A small but important implementation note:** `library(MASS)` is
+deliberately never attached in the source document (only `MASS::mvrnorm()`
+is called, via `::`). This is because `MASS` also defines a `select()`
+function that would silently shadow `dplyr::select()` if attached, breaking
+the pipeline above the moment it's loaded after `tidyverse`. This is a
+common `MASS`/`dplyr` gotcha worth knowing if you reuse this pattern
+elsewhere.
+:::
+
+## Step 3: fitting the model and classifying the result
+
+Once a dataset exists, it needs to be fit with the same kind of model a
+real analysis would use, and the fit's outcome needs to be captured in a
+structured way (including failure modes) so later steps can build
+diagnostics from it.
+
+```{r}
+#| label: fit-model-p2
+
+extract_terms_of_interest_p2 <- function(fit) {
+  terms <- c("zHLVA", "zPCREFp", "zHLVA:zPCREFp")
+  co <- tryCatch(summary(fit)$coefficients, error = function(e) NULL)
+  if (is.null(co)) return(NULL)
+  avail <- intersect(terms, rownames(co))
+  tibble(term = avail, estimate = co[avail, "Estimate"], std.error = co[avail, "Std. Error"])
+}
+
+fit_model_p2 <- function(data, re_spec = c("correct", "misspecified", "full_slopes")) {
+  re_spec <- match.arg(re_spec)
+  form <- switch(re_spec,
+    correct      = response ~ zHLVA * zPCREFp + (1 | participant_id) + (1 | text_id),
+    misspecified = response ~ zHLVA * zPCREFp + (1 | participant_id),
+    full_slopes  = response ~ zHLVA * zPCREFp + (1 + zPCREFp | participant_id) + (1 + zHLVA | text_id)
+  )
+  warn_msgs <- character(0)
+  fit <- tryCatch(
+    withCallingHandlers(
+      glmer(form, data = data, family = binomial, control = glmerControl(optimizer = "bobyqa")),
+      warning = function(w) { warn_msgs <<- c(warn_msgs, conditionMessage(w)); invokeRestart("muffleWarning") }
+    ),
+    error = function(e) e
+  )
+  if (inherits(fit, "error")) return(list(status = "error", coefs = NULL))
+  status <- if (length(warn_msgs) > 0 &&
+                any(grepl("failed to converge|Model failed|large eigenvalue|unable to evaluate",
+                          warn_msgs, ignore.case = TRUE))) {
+    "optimizer_warning"
+  } else if (isSingular(fit)) {
+    "converged_singular"
+  } else {
+    "converged_clean"
+  }
+  list(status = status, coefs = extract_terms_of_interest_p2(fit))
+}
+
+fit_model_p2_guarded <- function(data, re_spec, timeout_secs = 15) {
+  setTimeLimit(elapsed = timeout_secs, transient = TRUE)
+  res <- tryCatch(
+    fit_model_p2(data, re_spec),
+    error = function(e) list(status = "error", coefs = NULL)
+  )
+  setTimeLimit(elapsed = Inf, transient = FALSE)
+  res
+}
+```
+
+Three functions, each doing one job:
+
+**`extract_terms_of_interest_p2()`** pulls just the three coefficients this
+whole program cares about (`zHLVA`, `zPCREFp`, their interaction) out of a
+fitted model's coefficient table, as a tidy `term`/`estimate`/`std.error`
+tibble. `intersect(terms, rownames(co))` guards against a term being
+missing entirely (which can happen on a badly degenerate fit) rather than
+erroring.
+
+**`fit_model_p2()`** does the actual fitting. Three things worth noting:
+- The formula is chosen via `re_spec`, a three-way switch between `"correct"`
+  (random intercepts for both participant and text -- the specification
+  Aims 1-2 always use), `"misspecified"` (participant intercept only, used
+  by Aim 3 to quantify the cost of omitting a grouping factor), and
+  `"full_slopes"` (adds correlated random slopes, used only by Aim 5).
+- `withCallingHandlers()` around the `glmer()` call **captures warnings
+  without stopping execution** -- `invokeRestart("muffleWarning")` lets the
+  fit continue and the warning's text is stashed in `warn_msgs` for
+  inspection afterward, rather than letting it print to the console
+  thousands of times over a large simulation.
+- The `status` classification turns those captured warnings (plus `lme4`'s
+  own `isSingular()` check) into one of three buckets: `optimizer_warning`
+  (the optimizer itself flagged non-convergence), `converged_singular` (a
+  random-effect variance pinned at its zero boundary -- expected and common
+  at small `n_t`, as later diagnostics show), or `converged_clean`. This
+  three-way classification is what later analysis uses to report *how
+  often* fits broke down, not just what they estimated when they didn't.
+
+**`fit_model_p2_guarded()`** wraps `fit_model_p2()` in a per-fit wall-clock
+timeout (`setTimeLimit()`, default 15 seconds) so that one pathological fit
+in a 60,000+-fit simulation run can't hang the entire background job
+indefinitely; a fit that blows through the timeout is treated the same as
+any other error.
+
+## Step 4: the sample-size and effect-size grids
+
+```{r}
+#| label: sample-size-grid
+
+n_p_grid <- c(25, 100, 375, 725, 1300, 1497)
+n_t_grid <- c(2, 10, 35, 85, 136)
+```
+
+```{r}
+#| label: aim1-sweep-grids
+
+b_hlva_grid        <- c(0, 0.18, 0.363, 0.7, 1.0)
+b_pcref_grid       <- c(0, 0.05, 0.095, 0.2, 0.35)
+b_interaction_grid <- c(0, 0.025, 0.054, 0.10, 0.20)
+```
+
+`n_p_grid` (participant counts) and `n_t_grid` (text counts) together
+define 6 x 5 = 30 `(n_p, n_t)` "cells" -- every combination of participant
+and text sample size the simulation will visit. These particular values
+were carried over unchanged from an earlier, real-data resampling analysis
+(Phase 1), so that this parametric-simulation program's results can be laid
+directly alongside that earlier analysis's real-data findings.
+
+The three effect-size grids implement Aim 1's **one-at-a-time sweep**
+design: each grid has 5 values centered on that term's real,
+empirically-estimated effect size (the middle value in every grid),
+flanked by two smaller and two larger hypothetical true effects. Sweeping
+one term while holding the other two fixed at their real values -- rather
+than crossing all three simultaneously -- keeps the design a manageable
+"3 sweeps" rather than a combinatorial explosion, at the cost of not being
+able to see three-way interactions between the swept effects (not a
+concern here, since the real fitted model has no such three-way term among
+these predictors).
+
+## Step 5: generating a discovery/replication pair (for Aim 2)
+
+Aim 2 asks a different question from Aim 1: not "how well does one fit
+recover the truth," but "if I split my sample into two independent halves,
+does a significant finding in one replicate in the other?" That needs a
+function that generates *two* related datasets at once, sharing (or not)
+part of the design.
+
+```{r}
+#| label: generate-data-p2-pair
+
+generate_data_p2_pair <- function(
+    n_p_total, n_t_total, k = min(10, n_t_total), questions_per_text = 4,
+    b_intercept = 2.093, b_hlva = 0.363, b_pcref = 0.095, b_interaction = 0.054,
+    sd_participant = 0.69, sd_text = 0.41,
+    sd_pcref_slope = 0, sd_hlva_slope = 0, cor_part = 0, cor_text = 0,
+    split_margin = c("participants_only", "both"),
+    seed
+) {
+  split_margin <- match.arg(split_margin)
+  set.seed(seed)
+
+  n_p_half <- max(1, floor(n_p_total / 2))
+  n_t_half <- if (split_margin == "both") max(1, floor(n_t_total / 2)) else n_t_total
+
+  make_texts <- function(n_t) {
+    Sigma_text <- matrix(c(sd_text^2, cor_text * sd_text * sd_hlva_slope,
+                            cor_text * sd_text * sd_hlva_slope, sd_hlva_slope^2), nrow = 2)
+    re_text <- if (sd_hlva_slope > 0) MASS::mvrnorm(n_t, c(0, 0), Sigma_text) else cbind(rnorm(n_t, 0, sd_text), 0)
+    tibble(text_id = 1:n_t, zPCREFp = rnorm(n_t, 0, 1), u_text = re_text[, 1], s_hlva = re_text[, 2])
+  }
+  make_participants <- function(n_p) {
+    Sigma_part <- matrix(c(sd_participant^2, cor_part * sd_participant * sd_pcref_slope,
+                            cor_part * sd_participant * sd_pcref_slope, sd_pcref_slope^2), nrow = 2)
+    re_part <- if (sd_pcref_slope > 0) MASS::mvrnorm(n_p, c(0, 0), Sigma_part) else cbind(rnorm(n_p, 0, sd_participant), 0)
+    tibble(participant_id = 1:n_p, zHLVA = rnorm(n_p, 0, 1), u_participant = re_part[, 1], s_pcref = re_part[, 2])
+  }
+  build_dataset <- function(participants, texts) {
+    kk <- min(k, nrow(texts))
+    assignments <- tibble(participant_id = participants$participant_id) |>
+      dplyr::mutate(assigned = purrr::map(participant_id, ~ sample(texts$text_id, size = kk, replace = FALSE))) |>
+      tidyr::unnest(assigned) |> dplyr::rename(text_id = assigned)
+    assignments |>
+      dplyr::left_join(participants, by = "participant_id") |>
+      dplyr::left_join(texts, by = "text_id") |>
+      dplyr::slice(rep(1:dplyr::n(), each = questions_per_text)) |>
+      dplyr::mutate(
+        question_id = rep(1:questions_per_text, times = dplyr::n() / questions_per_text),
+        eta = b_intercept + (b_hlva + s_hlva) * zHLVA + (b_pcref + s_pcref) * zPCREFp +
+          b_interaction * zHLVA * zPCREFp + u_participant + u_text,
+        prob = plogis(eta), response = rbinom(dplyr::n(), 1, prob)
+      ) |>
+      dplyr::select(participant_id, text_id, question_id, zHLVA, zPCREFp, response)
+  }
+
+  texts_shared      <- make_texts(n_t_half)
+  participants_disc <- make_participants(n_p_half)
+  participants_repl <- make_participants(n_p_half)
+  texts_repl        <- if (split_margin == "both") make_texts(n_t_half) else texts_shared
+
+  list(
+    discovery   = build_dataset(participants_disc, texts_shared),
+    replication = build_dataset(participants_repl, texts_repl)
+  )
+}
+```
+
+This is deliberately a self-contained re-implementation of
+`generate_data_p2()`'s logic (three internal helpers `make_texts()`,
+`make_participants()`, `build_dataset()`, each doing the same job as the
+corresponding piece of Step 2) rather than a call to it, because it needs
+to build *two* datasets that share some pieces and not others, controlled
+by `split_margin`:
+
+- **`n_p_half`/`n_t_half`**: given a cell's *total* sample size, halve the
+  participant count always; halve the text count only if `split_margin =
+  "both"`. With `split_margin = "participants_only"` (what Aims 1-2 use),
+  `n_t_half` is just the full `n_t_total` -- both halves see the *same*
+  texts.
+- **Why avoid splitting texts at small `n_t`**: the comment in the source
+  document notes this choice specifically avoids degenerate 1-text halves
+  at the smallest grid point (`n_t = 2`) -- splitting 2 texts into two
+  halves of 1 would make the text-level random intercept trivially
+  unidentifiable in a different, less interesting way than the phenomenon
+  Aim 1/2 are trying to study.
+- **Building the pair**: `texts_shared` is generated once; `discovery` and
+  `replication` each get their *own*, independently-sampled participants
+  (`participants_disc`/`participants_repl`), but share `texts_shared`
+  unless `split_margin = "both"` asks for independent `texts_repl` too.
+  Each half is then expanded to the full participant x text x question
+  dataset via the shared `build_dataset()` helper -- functionally identical
+  to steps (h)-(j) of `generate_data_p2()`.
+
+## Step 6: diagnostics and the per-grid-cell orchestrator
+
+Everything above produces raw data and raw model fits. This step turns a
+raw fit's coefficients into the specific pass/fail diagnostics the report's
+tables and figures need, and then wires the whole pipeline together so a
+single function call handles one complete "cell" of the design (both aims,
+at a given sweep/effect value/sample size/replicate).
+
+```{r}
+#| label: aim1-aim2-diagnostics-and-runner
+
+diagnose_coefs_p2 <- function(coefs, true_vals) {
+  coefs |>
+    dplyr::mutate(
+      true_value      = true_vals[term],
+      ci_lower        = estimate - 1.96 * std.error,
+      ci_upper        = estimate + 1.96 * std.error,
+      ci_width        = ci_upper - ci_lower,
+      excludes_zero   = ci_lower > 0 | ci_upper < 0,
+      correct_sign    = sign(estimate) == sign(true_value),
+      sign_error      = excludes_zero & !correct_sign,
+      inflation_ratio = ifelse(true_value != 0, abs(estimate) / abs(true_value), NA_real_),
+      bias            = estimate - true_value,
+      covers_truth    = ci_lower <= true_value & true_value <= ci_upper
+    )
+}
+
+combine_replication_p2 <- function(res_disc, res_repl, true_vals) {
+  if (is.null(res_disc$coefs) || is.null(res_repl$coefs)) {
+    return(tibble(term = names(true_vals), replicated = NA, discovery_significant = NA))
+  }
+  disc <- diagnose_coefs_p2(res_disc$coefs, true_vals) |>
+    dplyr::select(term, estimate, excludes_zero)
+  repl <- diagnose_coefs_p2(res_repl$coefs, true_vals) |>
+    dplyr::select(term, estimate_repl = estimate, excludes_zero_repl = excludes_zero)
+  dplyr::full_join(disc, repl, by = "term") |>
+    dplyr::mutate(
+      discovery_significant = excludes_zero,
+      replicated = excludes_zero & excludes_zero_repl & sign(estimate) == sign(estimate_repl)
+    )
+}
+
+run_aim1_aim2_cell <- function(sweep, effect_value, n_p, n_t, rep, split_margin = "participants_only") {
+  b_hlva        <- if (sweep == "hlva")        effect_value else 0.363
+  b_pcref       <- if (sweep == "pcref")       effect_value else 0.095
+  b_interaction <- if (sweep == "interaction") effect_value else 0.054
+  true_vals <- c(zHLVA = b_hlva, zPCREFp = b_pcref, `zHLVA:zPCREFp` = b_interaction)
+
+  sweep_idx <- match(sweep, c("hlva", "pcref", "interaction"))
+  seed_base <- rep * 1e7 + n_p * 1e3 + n_t + sweep_idx * 1e5 + round(effect_value * 1000)
+
+  ## Aim 1: single full-sample fit
+  df_full  <- generate_data_p2(n_participants = n_p, n_texts = n_t,
+                                b_hlva = b_hlva, b_pcref = b_pcref, b_interaction = b_interaction,
+                                seed = seed_base)
+  res_full <- fit_model_p2_guarded(df_full, "correct")
+
+  aim1_rows <- if (!is.null(res_full$coefs)) {
+    diagnose_coefs_p2(res_full$coefs, true_vals) |> dplyr::mutate(status = res_full$status)
+  } else {
+    tibble(term = names(true_vals), status = res_full$status)
+  }
+  aim1_rows <- aim1_rows |>
+    dplyr::mutate(sweep = sweep, effect_value = effect_value, n_p = n_p, n_t = n_t, rep = rep)
+
+  ## Aim 2: discovery/replication split (same grid cell = total N)
+  pair <- generate_data_p2_pair(n_p_total = n_p, n_t_total = n_t,
+                                 b_hlva = b_hlva, b_pcref = b_pcref, b_interaction = b_interaction,
+                                 split_margin = split_margin, seed = seed_base + 1)
+  res_disc <- fit_model_p2_guarded(pair$discovery, "correct")
+  res_repl <- fit_model_p2_guarded(pair$replication, "correct")
+
+  aim2_rows <- combine_replication_p2(res_disc, res_repl, true_vals) |>
+    dplyr::mutate(
+      sweep = sweep, effect_value = effect_value, n_p = n_p, n_t = n_t, rep = rep,
+      split_margin = split_margin,
+      status_discovery = res_disc$status, status_replication = res_repl$status
+    )
+
+  list(aim1 = aim1_rows, aim2 = aim2_rows)
+}
+```
+
+**`diagnose_coefs_p2()`** is where "estimate + standard error" turns into
+the actual quantities the report's tables/figures show, given the true
+value being simulated:
+- `ci_lower`/`ci_upper`/`ci_width`: a 95% **Wald** interval
+  (`estimate +/- 1.96 x std.error`) -- chosen for speed over a
+  profile-likelihood interval, since this needs to run tens of thousands of
+  times.
+- `excludes_zero`: the conventional "statistically significant at p < .05"
+  criterion, expressed directly as a CI check.
+- `correct_sign`/`sign_error`: whether the point estimate's sign matches
+  the true value's sign, and specifically whether a *significant* result
+  has the *wrong* sign (Marek et al.'s "Type S" error).
+- `inflation_ratio`: `|estimate| / |true value|`, undefined (`NA`) when the
+  true value is exactly zero, since "how many times too large" isn't
+  meaningful for a null effect (Marek et al.'s "Type M" error, computed
+  later only among significant fits).
+- `bias` and `covers_truth`: the raw signed estimation error, and whether
+  the CI actually contains the true value (nominal 95% coverage would mean
+  this is `TRUE` 95% of the time under correct model specification).
+
+**`combine_replication_p2()`** takes two already-diagnosed fits (from two
+independent halves of one cell) and defines **replication**: a term counts
+as replicated only if it was significant in *both* halves *and* the sign
+agreed between them. `discovery_significant` records whether it was even
+significant in the first half at all -- needed later to compute the
+*conditional* replication rate (replication rate among only the
+discoveries), a distinct question from the *unconditional* rate.
+
+**`run_aim1_aim2_cell()`** is the orchestrator: given one sweep name, one
+swept effect value, one `(n_p, n_t)` cell, and one replicate index, it:
+1. Works out the three true coefficient values for this call -- the swept
+   term takes `effect_value`, the other two stay at their real,
+   empirically-observed defaults.
+2. Builds a **deterministic seed** from `(rep, n_p, n_t, sweep, effect_value)`
+   via a simple hashing formula, so every individual simulated dataset is
+   reproducible on its own, without needing to save the full random state
+   of a multi-hour parallel run.
+3. Runs the **Aim 1** side: one dataset at the full cell size, fit once,
+   diagnosed once.
+4. Runs the **Aim 2** side: one discovery/replication *pair* at the same
+   total cell size (so a cell's total sample size means the same thing in
+   both aims), each half fit and diagnosed, then combined into a
+   replication verdict.
+5. Returns both aims' results together as a two-element list, so a single
+   function call produces everything one "cell" contributes to both aims'
+   final datasets.
+
+## Step 7: running the full design (outside this document)
+
+Every piece above is a function -- nothing has actually been executed at
+scale yet. Producing the real input data for the report meant calling
+`run_aim1_aim2_cell()` once for **every** combination of:
+
+- 3 sweeps (`hlva`, `pcref`, `interaction`)
+- x 5 effect values each
+- x 30 `(n_p, n_t)` cells
+- x 50 replicates per cell
+
+-- 22,500 calls to `run_aim1_aim2_cell()`, each of which performs 3
+`glmer` fits internally (Aim 1's one fit, plus Aim 2's discovery and
+replication fits), for **67,500 total model fits**. This was executed as a
+**detached background R process** (`run_aim1_aim2_full.R`, not part of
+this document), one sweep at a time, using `furrr::plan(multisession,
+workers = 4)` to fit cells in parallel across 4 worker processes. All three
+sweeps together took roughly 5 hours of wall-clock time. Results were saved
+to six `.rds` files (`results_phase2/aim1_hlva.rds`,
+`results_phase2/aim2_hlva.rds`, and the `pcref`/`interaction` equivalents).
+
+This step is worth calling out explicitly in a tutorial, even though there
+is no code chunk to show for it here: **a simulation of this size should
+not be run inside the document that reports on it.** Rendering a report
+should be fast and repeatable; a multi-hour parallel batch job belongs in
+its own script, run once, with its output saved and loaded (as the next
+step does).
+
+## Step 8: turning saved results into the tibbles the visualizations use
+
+This is the last step on the *generation* side -- the point at which raw,
+already-computed simulation output becomes exactly the data structures the
+report's tables and figures consume directly.
+
+```{r}
+#| label: load-aim1-aim2-results
+
+aim1_files <- c("results_phase2/aim1_hlva.rds", "results_phase2/aim1_pcref.rds",
+                 "results_phase2/aim1_interaction.rds")
+aim2_files <- c("results_phase2/aim2_hlva.rds", "results_phase2/aim2_pcref.rds",
+                 "results_phase2/aim2_interaction.rds")
+missing_files <- c(aim1_files, aim2_files)[!file.exists(c(aim1_files, aim2_files))]
+if (length(missing_files) > 0) {
+  stop(
+    "Missing Aim 1/2 result file(s): ", paste(missing_files, collapse = ", "),
+    ". These are produced by the detached background job run_aim1_aim2_full.R ",
+    "(~5h on 4 workers) -- this document does not regenerate them inline. ",
+    "Run that script first if the files are genuinely absent."
+  )
+}
+
+aim1_hlva        <- readRDS("results_phase2/aim1_hlva.rds")
+aim1_pcref       <- readRDS("results_phase2/aim1_pcref.rds")
+aim1_interaction <- readRDS("results_phase2/aim1_interaction.rds")
+aim2_hlva        <- readRDS("results_phase2/aim2_hlva.rds")
+aim2_pcref       <- readRDS("results_phase2/aim2_pcref.rds")
+aim2_interaction <- readRDS("results_phase2/aim2_interaction.rds")
+
+own_effect <- c(zHLVA = 0.363, zPCREFp = 0.095, `zHLVA:zPCREFp` = 0.054)
+term_levels <- c("zHLVA", "zPCREFp", "zHLVA:zPCREFp")
+
+# Each sweep's own term, evaluated only at its empirically-observed effect
+# size -- the slice used by most tables/figures below.
+aim1_all <- dplyr::bind_rows(
+  aim1_hlva        |> dplyr::filter(term == "zHLVA",        effect_value == own_effect["zHLVA"]),
+  aim1_pcref       |> dplyr::filter(term == "zPCREFp",       effect_value == own_effect["zPCREFp"]),
+  aim1_interaction |> dplyr::filter(term == "zHLVA:zPCREFp", effect_value == own_effect["zHLVA:zPCREFp"])
+) |> dplyr::mutate(term = factor(term, levels = term_levels))
+
+aim2_all <- dplyr::bind_rows(
+  aim2_hlva        |> dplyr::filter(term == "zHLVA",        effect_value == own_effect["zHLVA"]),
+  aim2_pcref       |> dplyr::filter(term == "zPCREFp",       effect_value == own_effect["zPCREFp"]),
+  aim2_interaction |> dplyr::filter(term == "zHLVA:zPCREFp", effect_value == own_effect["zHLVA:zPCREFp"])
+) |> dplyr::mutate(term = factor(term, levels = term_levels))
+
+# Full effect-size sweep, all points (not just the own-effect-size slice) --
+# used for the Aim 1 power-curves figure below.
+aim1_sweep_combined <- dplyr::bind_rows(
+  aim1_hlva        |> dplyr::filter(term == "zHLVA"),
+  aim1_pcref       |> dplyr::filter(term == "zPCREFp"),
+  aim1_interaction |> dplyr::filter(term == "zHLVA:zPCREFp")
+) |> dplyr::mutate(term = factor(term, levels = term_levels))
+```
+
+Piece by piece:
+
+- **The `file.exists()` guard.** Before touching anything else, the code
+  checks that all six expected `.rds` files exist and fails loudly with a
+  specific, actionable error message if any are missing, rather than
+  letting a later step fail confusingly (or silently proceed with stale
+  data). This is a good habit any time a document depends on
+  externally-produced files it doesn't (and shouldn't) regenerate itself.
+- **Loading the six files.** Each sweep's Aim 1 and Aim 2 results were
+  saved separately by the background job, so there are six objects to
+  read in: `aim1_hlva`, `aim1_pcref`, `aim1_interaction` and their Aim 2
+  counterparts. Each is a long tibble with one row per (term, effect
+  value, `n_p`, `n_t`, replicate) combination.
+- **`own_effect` and `term_levels`.** `own_effect` records each term's
+  real, empirically-observed value -- the same numbers used as defaults
+  back in Step 2/6 -- so that later filtering can pick out "the row where
+  the swept effect equals its real value" without hard-coding that number
+  three separate times. `term_levels` fixes a consistent factor ordering
+  (`zHLVA`, `zPCREFp`, interaction) used throughout so tables and plots
+  always present the three terms in the same order.
+- **`aim1_all` / `aim2_all`: the "own effect size" slice.** Each sweep's
+  saved results contain data for *all five* swept effect-size values (0,
+  small, real, large, larger), but most tables/figures only want *each
+  term's own real value* -- e.g. `zHLVA`'s row from the `hlva` sweep at
+  `effect_value == 0.363`, not from the `pcref` or `interaction` sweeps
+  (where `zHLVA` was just held fixed as a covariate, not the focus). The
+  three `filter()` + `bind_rows()` calls pick exactly one term from each of
+  the three sweeps' output and stack them into one tidy tibble.
+- **`aim1_sweep_combined`: the full sweep, kept separate.** One figure (the
+  power-curves figure, showing how power changes as the *true effect size
+  itself* varies) genuinely needs every effect-size value, not just the
+  real one -- so this object keeps all five values per term rather than
+  filtering down to one.
+
+At this point, `aim1_all`, `aim2_all`, and `aim1_sweep_combined` are exactly
+the data structures every downstream table and figure consumes. Nothing
+past this point generates new data -- everything from here on is
+summarizing (`group_by()`/`summarise()`) and plotting what these three
+tibbles already contain.
+
+::: {.callout-tip}
+## If you want to actually run this yourself
+
+The full 67,500-fit design is a multi-hour job and shouldn't be your first
+attempt at reproducing this. The source document
+(`synthetic-data-analyses-power-error-replication-aims-1-2-draft.qmd`)
+contains a small, self-contained **smoke test** in its collapsed
+"Development history" section that calls exactly the functions walked
+through above (`run_aim1_aim2_cell()`, and transitively everything else) on
+a tiny 24-combination grid, completing in about 6 seconds -- a good
+starting point for experimenting with this code interactively before
+attempting anything at full scale.
+:::

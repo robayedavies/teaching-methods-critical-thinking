@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Thinking about null hypothesis significance testing</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="nhst-thought-process_files/libs/clipboard/clipboard.min.js"></script>
+<script src="nhst-thought-process_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="nhst-thought-process_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="nhst-thought-process_files/libs/quarto-html/popper.min.js"></script>
+<script src="nhst-thought-process_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="nhst-thought-process_files/libs/quarto-html/anchor.min.js"></script>
+<link href="nhst-thought-process_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="nhst-thought-process_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="nhst-thought-process_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="nhst-thought-process_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="nhst-thought-process_files/libs/bootstrap/bootstrap-917079515d91bccb85b543faf8aa8bb6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Thinking about null hypothesis significance testing</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>This chapter builds a way of talking about null hypothesis significance testing (NHST) in three stages. We imagine a single study, then imagine the same study repeated many times, and then ask what that repetition implies about the estimates that end up being reported.</p>
+<ul>
+<li><strong>Part A</strong> builds the null distribution and the Neyman–Pearson decision rule.</li>
+<li><strong>Part B</strong> asks what happens when the null is false, and introduces power.</li>
+<li><strong>Part C</strong> asks what happens to the estimates we see when only significant results are reported (the significance filter), and how precision changes with sample size.</li>
+</ul>
+<p>The running example is the association between reading experience, measured by the Author Recognition Test (ART3; <span class="citation" data-cites="vermeiren2023">@vermeiren2023</span>), and vocabulary.</p>
+</section>
+<section id="part-a-building-the-null-distribution" class="level2">
+<h2 class="anchored" data-anchor-id="part-a-building-the-null-distribution">Part A: Building the null distribution</h2>
+<section id="one-person-one-score" class="level3">
+<h3 class="anchored" data-anchor-id="one-person-one-score">One person, one score</h3>
+<p>Imagine I test you on vocabulary. You score 25. That number on its own tells us little.</p>
+</section>
+<section id="a-sample" class="level3">
+<h3 class="anchored" data-anchor-id="a-sample">A sample</h3>
+<p>Now imagine I test you and 19 other people. We have a sample of <span class="math inline">\(n = 20\)</span> scores.</p>
+</section>
+<section id="a-second-construct" class="level3">
+<h3 class="anchored" data-anchor-id="a-second-construct">A second construct</h3>
+<p>Suppose I also measure reading experience, for you and everyone else in the sample, using the ART3 <span class="citation" data-cites="vermeiren2023">[@vermeiren2023]</span>. Each person now has two scores.</p>
+</section>
+<section id="the-correlation" class="level3">
+<h3 class="anchored" data-anchor-id="the-correlation">The correlation</h3>
+<p>I calculate Pearson’s <span class="math inline">\(r\)</span> between vocabulary and ART scores. To the extent that the tests are valid and reliable, <span class="math inline">\(r\)</span> tells us about the association between reading experience and vocabulary in <em>this sample</em>.</p>
+</section>
+<section id="a-test-of-the-null-hypothesis" class="level3">
+<h3 class="anchored" data-anchor-id="a-test-of-the-null-hypothesis">A test of the null hypothesis</h3>
+<p>We can ask whether the data are compatible with a population correlation of zero (<span class="math inline">\(\rho = 0\)</span>). One way is to calculate</p>
+<p><span class="math display">\[t = \frac{r\sqrt{n-2}}{\sqrt{1-r^2}}\]</span></p>
+<p>with <span class="math inline">\(n - 2 = 18\)</span> degrees of freedom.</p>
+</section>
+<section id="repeating-the-study-in-imagination" class="level3">
+<h3 class="anchored" data-anchor-id="repeating-the-study-in-imagination">Repeating the study, in imagination</h3>
+<p>Now imagine running these steps over and over, on new samples of 20 people, in a world where <span class="math inline">\(\rho = 0\)</span> is true. Each study gives a different <span class="math inline">\(r\)</span> and a different <span class="math inline">\(t\)</span>, purely through sampling variation. This only works as a thought experiment if we say what the imagined world is: a population in which the true correlation is zero (and, for the exact <span class="math inline">\(t\)</span> distribution, in which the two variables are bivariate normal). The distribution is not built from real data. It is built from an assumption.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">20</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>t_100 <span class="ot">&lt;-</span> <span class="fu">sim_studies</span>(n, <span class="at">rho =</span> <span class="dv">0</span>, <span class="at">reps =</span> <span class="dv">100</span>)<span class="sc">$</span>t</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(t_100, <span class="at">breaks =</span> <span class="dv">20</span>, <span class="at">main =</span> <span class="st">"100 studies, true null"</span>, <span class="at">xlab =</span> <span class="st">"t"</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">qt</span>(<span class="fu">c</span>(.<span class="dv">025</span>, .<span class="dv">975</span>), <span class="at">df =</span> n <span class="sc">-</span> <span class="dv">2</span>), <span class="at">lty =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-null-100" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-null-100-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="nhst-thought-process_files/figure-html/fig-null-100-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-null-100-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: The t statistic in 100 imagined studies (n = 20) where the true correlation is zero. Dashed lines mark the two-tailed 5% cutoffs.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>With 100 studies the histogram is ragged. With 10,000 it approaches the smooth <span class="math inline">\(t\)</span> distribution with 18 degrees of freedom: roughly bell-shaped, with heavier tails than the normal.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>t_null <span class="ot">&lt;-</span> <span class="fu">sim_studies</span>(n, <span class="at">rho =</span> <span class="dv">0</span>, <span class="at">reps =</span> <span class="dv">10000</span>)<span class="sc">$</span>t</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(t_null, <span class="at">breaks =</span> <span class="dv">60</span>, <span class="at">freq =</span> <span class="cn">FALSE</span>, <span class="at">main =</span> <span class="st">"10,000 studies, true null"</span>, <span class="at">xlab =</span> <span class="st">"t"</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dt</span>(x, n <span class="sc">-</span> <span class="dv">2</span>), <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">qt</span>(<span class="fu">c</span>(.<span class="dv">025</span>, .<span class="dv">975</span>), <span class="at">df =</span> n <span class="sc">-</span> <span class="dv">2</span>), <span class="at">lty =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-null-10000" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-null-10000-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="nhst-thought-process_files/figure-html/fig-null-10000-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-null-10000-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: The same exercise with 10,000 imagined studies. The curve is the t distribution with 18 degrees of freedom.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="how-often-is-t-large" class="level3">
+<h3 class="anchored" data-anchor-id="how-often-is-t-large">How often is <span class="math inline">\(t\)</span> “large”?</h3>
+<p>Given this distribution, we can say how often <span class="math inline">\(|t|\)</span> exceeds some value when the null is true. For <span class="math inline">\(n = 20\)</span> the two-tailed 5% cutoff is</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">qt</span>(.<span class="dv">975</span>, <span class="at">df =</span> <span class="dv">18</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2.100922</code></pre>
+</div>
+</div>
+<p>so <span class="math inline">\(|t| \geq 2.10\)</span> occurs in 5% of studies, with 2.5% in each tail. The familiar 1.96 is the large-sample limit of this cutoff, and the gap between 2.10 and 1.96 is the effect of small samples on the shape of the distribution. The cutoff for <span class="math inline">\(t\)</span> corresponds to a cutoff for <span class="math inline">\(r\)</span>: at <span class="math inline">\(n = 20\)</span>, only <span class="math inline">\(|r| \gtrsim .44\)</span> can be significant.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># critical r at n = 20</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>tc <span class="ot">&lt;-</span> <span class="fu">qt</span>(.<span class="dv">975</span>, <span class="dv">18</span>); tc <span class="sc">/</span> <span class="fu">sqrt</span>(tc<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="dv">18</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.4437634</code></pre>
+</div>
+</div>
+</section>
+<section id="rejecting-the-null" class="level3">
+<h3 class="anchored" data-anchor-id="rejecting-the-null">Rejecting the null</h3>
+<p>If our observed <span class="math inline">\(|t|\)</span> exceeds the cutoff, we reject the null. Following <span class="citation" data-cites="greenland2016">@greenland2016</span>, we can say the data are <em>incompatible</em> with the null, along with all the other assumptions used to compute <span class="math inline">\(t\)</span> (random sampling, normality, no selective reporting, and so on).</p>
+</section>
+<section id="error-rates-the-neymanpearson-framework" class="level3">
+<h3 class="anchored" data-anchor-id="error-rates-the-neymanpearson-framework">Error rates: the Neyman–Pearson framework</h3>
+<p>This decision-rule logic comes from <span class="citation" data-cites="neyman1928">@neyman1928</span> and <span class="citation" data-cites="neyman1933">@neyman1933</span>. If we always reject when <span class="math inline">\(|t| \geq 2.10\)</span>, then in the long run we falsely reject a true null in 5% of tests. This is the Type I error rate, <span class="math inline">\(\alpha\)</span>. It is a property of the <em>procedure</em>, evaluated over the imagined repetitions. It is not the probability that any one significant result is false.</p>
+<p>This framework differs from Fisher’s use of the <span class="math inline">\(p\)</span>-value as a graded measure of evidence <span class="citation" data-cites="fisher1925">[@fisher1925]</span>. Modern practice mixes the two, which <span class="citation" data-cites="gigerenzer2004">@gigerenzer2004</span> describes as the “null ritual”, with the historical background in <span class="citation" data-cites="gigerenzer1989">@gigerenzer1989</span> and a more recent review in <span class="citation" data-cites="gigerenzer2018">@gigerenzer2018</span>.</p>
+</section>
+</section>
+<section id="part-b-when-the-null-is-false" class="level2">
+<h2 class="anchored" data-anchor-id="part-b-when-the-null-is-false">Part B: When the null is false</h2>
+<section id="suppose-there-is-an-association" class="level3">
+<h3 class="anchored" data-anchor-id="suppose-there-is-an-association">Suppose there is an association</h3>
+<p>Now suppose the population correlation between ART3 and vocabulary is not zero. Say <span class="math inline">\(\rho = .3\)</span>. Nothing about our procedure changes. We test 20 people, calculate <span class="math inline">\(r\)</span>, and calculate <span class="math inline">\(t\)</span> with 18 degrees of freedom.</p>
+</section>
+<section id="repeating-the-study-again" class="level3">
+<h3 class="anchored" data-anchor-id="repeating-the-study-again">Repeating the study, again</h3>
+<p>Imagine running the study over and over, each time on a new sample of 20, in a world where <span class="math inline">\(\rho = .3\)</span>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>rho <span class="ot">&lt;-</span> .<span class="dv">3</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>alt <span class="ot">&lt;-</span> <span class="fu">sim_studies</span>(n, rho, <span class="at">reps =</span> <span class="dv">10000</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>crit <span class="ot">&lt;-</span> <span class="fu">qt</span>(.<span class="dv">975</span>, <span class="at">df =</span> n <span class="sc">-</span> <span class="dv">2</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(alt<span class="sc">$</span>t, <span class="at">breaks =</span> <span class="dv">60</span>, <span class="at">freq =</span> <span class="cn">FALSE</span>, <span class="at">main =</span> <span class="st">"10,000 studies, rho = .3"</span>, <span class="at">xlab =</span> <span class="st">"t"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="fu">curve</span>(<span class="fu">dt</span>(x, n <span class="sc">-</span> <span class="dv">2</span>), <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="sc">-</span>crit, crit), <span class="at">lty =</span> <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-alt-t" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-alt-t-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="nhst-thought-process_files/figure-html/fig-alt-t-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-alt-t-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: The t statistic in 10,000 imagined studies (n = 20) where rho = .3. The dashed curve is the null distribution from Part A; dotted lines are the cutoffs.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The distribution of <span class="math inline">\(t\)</span> has shifted to the right and is somewhat skewed, so it is no longer the symmetric curve from Part A. It still overlaps heavily with the null distribution. Many studies land between the cutoffs. (We call this distribution “shifted and skewed” rather than “noncentral <span class="math inline">\(t\)</span>” for a reason that is explained below, after the power table.)</p>
+</section>
+<section id="power-and-the-false-negative-rate" class="level3">
+<h3 class="anchored" data-anchor-id="power-and-the-false-negative-rate">Power and the false negative rate</h3>
+<p>Using the same decision rule as before (reject if <span class="math inline">\(|t| \geq 2.10\)</span>):</p>
+<ul>
+<li><strong>Power</strong> is the proportion of studies in which we correctly reject the null.</li>
+<li>The <strong>false negative rate</strong>, <span class="math inline">\(\beta\)</span>, is the proportion in which we <em>fail to reject</em> a null that is false. Power is <span class="math inline">\(1 - \beta\)</span>.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(alt<span class="sc">$</span>sig)   <span class="co"># estimated power at rho = .3, n = 20</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.2458</code></pre>
+</div>
+</div>
+<p>In the Neyman–Pearson framework we fix <span class="math inline">\(\alpha\)</span> in advance. Power then depends on three things: the true effect size, the sample size, and <span class="math inline">\(\alpha\)</span>.</p>
+</section>
+<section id="two-ways-to-be-wrong-one-decision-rule" class="level3">
+<h3 class="anchored" data-anchor-id="two-ways-to-be-wrong-one-decision-rule">Two ways to be wrong, one decision rule</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th></th>
+<th>Null true</th>
+<th>Null false</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Reject</td>
+<td>Type I error (rate <span class="math inline">\(\alpha\)</span>)</td>
+<td>Correct (power, <span class="math inline">\(1-\beta\)</span>)</td>
+</tr>
+<tr class="even">
+<td>Fail to reject</td>
+<td>Correct (<span class="math inline">\(1-\alpha\)</span>)</td>
+<td>Type II error (rate <span class="math inline">\(\beta\)</span>)</td>
+</tr>
+</tbody>
+</table>
+<p>Note that rejecting a false null is a <em>correct</em> decision. The error that low power produces is failing to reject a false null.</p>
+</section>
+<section id="power-across-effect-sizes-and-sample-sizes" class="level3">
+<h3 class="anchored" data-anchor-id="power-across-effect-sizes-and-sample-sizes">Power across effect sizes and sample sizes</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">5</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>rhos <span class="ot">&lt;-</span> <span class="fu">c</span>(.<span class="dv">1</span>, .<span class="dv">3</span>, .<span class="dv">5</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>tab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">rho =</span> rhos,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">power_n20 =</span> <span class="fu">sapply</span>(rhos, <span class="cf">function</span>(p) <span class="fu">mean</span>(<span class="fu">sim_studies</span>(<span class="dv">20</span>, p, <span class="dv">5000</span>)<span class="sc">$</span>sig)),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_80 =</span> <span class="fu">sapply</span>(rhos, <span class="cf">function</span>(p) <span class="fu">ceiling</span>(((<span class="fu">qnorm</span>(.<span class="dv">975</span>) <span class="sc">+</span> <span class="fu">qnorm</span>(.<span class="dv">8</span>)) <span class="sc">/</span> <span class="fu">atanh</span>(p))<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="dv">3</span>))</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(tab, <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>             <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"True rho"</span>, <span class="st">"Power at n = 20"</span>, <span class="st">"n for ~80% power"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="tbl-power" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-power-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Simulated power (alpha = .05, two-tailed) and the approximate n for 80% power.
+</figcaption>
+<div aria-describedby="tbl-power-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">True rho</th>
+<th style="text-align: right;">Power at n = 20</th>
+<th style="text-align: right;">n for ~80% power</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0.1</td>
+<td style="text-align: right;">0.07</td>
+<td style="text-align: right;">783</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.3</td>
+<td style="text-align: right;">0.26</td>
+<td style="text-align: right;">85</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">30</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>Two different methods produced the numbers in this table, and it is worth being clear about what each one is. The point to take away is that realistic reading–vocabulary effects need samples far larger than 20. The next section explains where the numbers come from.</p>
+</section>
+<section id="where-do-power-numbers-come-from" class="level3">
+<h3 class="anchored" data-anchor-id="where-do-power-numbers-come-from">Where do power numbers come from?</h3>
+<p>There are three routes to a power figure: simulation, a formula based on Fisher’s <span class="math inline">\(z\)</span>, and a formula based on the noncentral <span class="math inline">\(t\)</span> distribution. They agree closely here, but they rest on different logic, and only the first is a direct implementation of “imagine the study repeated many times”.</p>
+<section id="route-1-simulation-monte-carlo" class="level4">
+<h4 class="anchored" data-anchor-id="route-1-simulation-monte-carlo">Route 1: simulation (Monte Carlo)</h4>
+<p>This is the route we have been following. Generate many studies from a population with the stated <span class="math inline">\(\rho\)</span>, apply the decision rule to each, and count the proportion that reject. Its strength is that it needs no theory beyond the sampling model itself. Its limitation is that the answer carries <em>Monte Carlo error</em>. If true power is <span class="math inline">\(p\)</span> and we run <span class="math inline">\(B\)</span> simulated studies, the estimate has a standard error of about <span class="math inline">\(\sqrt{p(1-p)/B}\)</span>. With <span class="math inline">\(B = 5{,}000\)</span> and <span class="math inline">\(p \approx .25\)</span> that is about .006, so the third decimal place is noise. Different random seeds, or different versions of R, will give slightly different values. That is why the table reports two decimals, and why the results are computed when the chapter is rendered rather than typed in.</p>
+</section>
+<section id="route-2-the-fisher-z-approximation" class="level4">
+<h4 class="anchored" data-anchor-id="route-2-the-fisher-z-approximation">Route 2: the Fisher <span class="math inline">\(z\)</span> approximation</h4>
+<p>A correlation is bounded between <span class="math inline">\(-1\)</span> and <span class="math inline">\(1\)</span>, so its sampling distribution is skewed whenever <span class="math inline">\(\rho \neq 0\)</span>. Fisher’s transformation <span class="math inline">\(z = \operatorname{arctanh}(r)\)</span> removes most of that skew. After transforming, <span class="math inline">\(z\)</span> is approximately normal, with mean <span class="math inline">\(\operatorname{arctanh}(\rho)\)</span> and a standard deviation of <span class="math inline">\(1/\sqrt{n-3}\)</span> that does not depend on <span class="math inline">\(\rho\)</span>.</p>
+<p>That gives a simple recipe. Define the standardised true effect</p>
+<p><span class="math display">\[\delta = \operatorname{arctanh}(\rho)\,\sqrt{n-3}.\]</span></p>
+<p>The test rejects when the standardised statistic exceeds <span class="math inline">\(z_{1-\alpha/2}\)</span> in absolute value, so power is approximately</p>
+<p><span class="math display">\[1 - \beta \approx \Phi(\delta - z_{1-\alpha/2}) + \Phi(-\delta - z_{1-\alpha/2}).\]</span></p>
+<p>The second term is almost zero for effects of this size, so we can drop it and solve for the sample size that gives a target power (80%, so <span class="math inline">\(z_{1-\beta} = 0.84\)</span>):</p>
+<p><span class="math display">\[n \approx \left(\frac{z_{1-\alpha/2} + z_{1-\beta}}{\operatorname{arctanh}(\rho)}\right)^2 + 3.\]</span></p>
+<p>This is the formula behind the “<span class="math inline">\(n\)</span> for ~80% power” column. It is quick and shows how <span class="math inline">\(n\)</span> scales: halving the effect size roughly quadruples the sample size needed. It is still an approximation, because the normality of <span class="math inline">\(z\)</span> is approximate and because it uses the normal cutoff (1.96) rather than the <span class="math inline">\(t\)</span> cutoff (2.10). Its error is small for moderate <span class="math inline">\(n\)</span> and larger for very small <span class="math inline">\(n\)</span>.</p>
+</section>
+<section id="route-3-the-noncentral-t-distribution" class="level4">
+<h4 class="anchored" data-anchor-id="route-3-the-noncentral-t-distribution">Route 3: the noncentral <span class="math inline">\(t\)</span> distribution</h4>
+<p>For an ordinary <span class="math inline">\(t\)</span>-test comparing two means, the statistic follows a <em>noncentral</em> <span class="math inline">\(t\)</span> distribution when the null is false. This is the distribution people usually have in mind when they say “power is the area of the noncentral <span class="math inline">\(t\)</span> beyond the cutoff”. It is natural to expect the same to hold for the correlation test, but it holds only conditionally.</p>
+<p>The statistic <span class="math inline">\(t = r\sqrt{n-2}/\sqrt{1-r^2}\)</span> is the <span class="math inline">\(t\)</span> statistic for the slope of a regression of vocabulary on ART3. If we <strong>treated the ART3 scores as fixed numbers</strong> (as in a designed experiment), then <span class="math inline">\(t\)</span> would follow a noncentral <span class="math inline">\(t\)</span> with <span class="math inline">\(n-2\)</span> degrees of freedom and a noncentrality parameter proportional to the spread of those fixed scores.</p>
+<p>In our study the ART3 scores are <strong>random</strong>: a new sample gives new ART3 scores with a new spread. The noncentrality parameter therefore changes from study to study. It is approximately</p>
+<p><span class="math display">\[\text{ncp} = \frac{\rho}{\sqrt{1-\rho^2}}\sqrt{\chi^2_{n-1}},\]</span></p>
+<p>where <span class="math inline">\(\chi^2_{n-1}\)</span> is a chi-square random variable capturing how spread out the sampled ART3 scores happen to be. The distribution of <span class="math inline">\(t\)</span> across studies is then a <em>mixture</em> of noncentral <span class="math inline">\(t\)</span> distributions, with a different centre in each study. A mixture of this kind is not itself a noncentral <span class="math inline">\(t\)</span>.</p>
+<p>This explains something about the structure of Parts A and B:</p>
+<ul>
+<li><strong>Under the null</strong> (<span class="math inline">\(\rho = 0\)</span>) the noncentrality parameter is zero whatever the ART3 scores are, so every component of the mixture is the same central <span class="math inline">\(t\)</span> distribution. The mixture collapses, and the Part A distribution is exact.</li>
+<li><strong>Under an alternative</strong> (<span class="math inline">\(\rho \neq 0\)</span>) the mixture does not collapse. The result is shifted away from zero and skewed. A single noncentral <span class="math inline">\(t\)</span> evaluated at the <em>average</em> noncentrality parameter is a good approximation, but it is not exact.</li>
+</ul>
+<p>The code below checks all of this for <span class="math inline">\(\rho = .3\)</span> and <span class="math inline">\(n = 20\)</span>. It compares four power estimates: direct simulation of studies, the mixture of noncentral <span class="math inline">\(t\)</span> distributions, a single noncentral <span class="math inline">\(t\)</span> at the typical noncentrality, and the Fisher <span class="math inline">\(z\)</span> formula.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">8</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">20</span>; rho <span class="ot">&lt;-</span> .<span class="dv">3</span>; B <span class="ot">&lt;-</span> <span class="dv">20000</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>crit <span class="ot">&lt;-</span> <span class="fu">qt</span>(.<span class="dv">975</span>, n <span class="sc">-</span> <span class="dv">2</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Direct simulation of studies</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>power_sim <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">sim_studies</span>(n, rho, B)<span class="sc">$</span>sig)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Mixture: each study has its own noncentrality parameter</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>ncp_i <span class="ot">&lt;-</span> rho <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="dv">1</span> <span class="sc">-</span> rho<span class="sc">^</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">rchisq</span>(B, n <span class="sc">-</span> <span class="dv">1</span>))</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>t_mix <span class="ot">&lt;-</span> <span class="fu">rt</span>(B, <span class="at">df =</span> n <span class="sc">-</span> <span class="dv">2</span>, <span class="at">ncp =</span> ncp_i)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>power_mix <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">abs</span>(t_mix) <span class="sc">&gt;=</span> crit)</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. A single noncentral t at the typical noncentrality</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>ncp_1 <span class="ot">&lt;-</span> rho <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="dv">1</span> <span class="sc">-</span> rho<span class="sc">^</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">sqrt</span>(n <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>power_nct <span class="ot">&lt;-</span> <span class="fu">pt</span>(<span class="sc">-</span>crit, n <span class="sc">-</span> <span class="dv">2</span>, ncp_1) <span class="sc">+</span> <span class="fu">pt</span>(crit, n <span class="sc">-</span> <span class="dv">2</span>, ncp_1, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Fisher z approximation</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>delta <span class="ot">&lt;-</span> <span class="fu">atanh</span>(rho) <span class="sc">*</span> <span class="fu">sqrt</span>(n <span class="sc">-</span> <span class="dv">3</span>)</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>power_fz <span class="ot">&lt;-</span> <span class="fu">pnorm</span>(delta <span class="sc">-</span> <span class="fu">qnorm</span>(.<span class="dv">975</span>)) <span class="sc">+</span> <span class="fu">pnorm</span>(<span class="sc">-</span>delta <span class="sc">-</span> <span class="fu">qnorm</span>(.<span class="dv">975</span>))</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">method =</span> <span class="fu">c</span>(<span class="st">"Simulate studies"</span>, <span class="st">"Mixture of noncentral t"</span>,</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"Single noncentral t"</span>, <span class="st">"Fisher z formula"</span>),</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>             <span class="at">power =</span> <span class="fu">c</span>(power_sim, power_mix, power_nct, power_fz)),</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">3</span>, <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Method"</span>, <span class="st">"Power"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="tbl-power-methods" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-power-methods-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: Four ways to estimate power for rho = .3, n = 20 (alpha = .05, two-tailed).
+</figcaption>
+<div aria-describedby="tbl-power-methods-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: right;">Power</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Simulate studies</td>
+<td style="text-align: right;">0.252</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Mixture of noncentral t</td>
+<td style="text-align: right;">0.250</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Single noncentral t</td>
+<td style="text-align: right;">0.255</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Fisher z formula</td>
+<td style="text-align: right;">0.248</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>Expect the first two rows to agree to within Monte Carlo error, because they describe the same process: that is the evidence that the mixture explanation is right. The last two rows should be close to them but not identical, because each is a one-step approximation.</p>
+</section>
+<section id="why-the-distinction-matters-for-teaching" class="level4">
+<h4 class="anchored" data-anchor-id="why-the-distinction-matters-for-teaching">Why the distinction matters for teaching</h4>
+<ul>
+<li>It reinforces the idea that every power number answers the question “what proportion of imagined studies reject?”, under a stated set of assumptions.</li>
+<li>Formulas are shortcuts to that proportion. Simulation is the definition. When the two disagree noticeably (for example at very small <span class="math inline">\(n\)</span>, with non-normal data, or with a messy analysis pipeline) the simulation is the one to trust, provided it reproduces the data-generating process.</li>
+<li>Assumptions are part of the answer. Both formulas assume bivariate normality. If vocabulary or ART3 scores are skewed or have ceiling effects, the simulation can be rerun with a more realistic data-generating process.</li>
+</ul>
+</section>
+</section>
+<section id="interpreting-a-null-result" class="level3">
+<h3 class="anchored" data-anchor-id="interpreting-a-null-result">Interpreting a “null result”</h3>
+<p>If power is low, a non-significant result is what we would expect to see most of the time, even when the effect is real. A non-significant <span class="math inline">\(t\)</span> therefore does not show that <span class="math inline">\(\rho = 0\)</span>. Failing to reject is not accepting. A null result is hard to interpret unless we have a reason to think the test could have detected an effect of the size we care about.</p>
+</section>
+<section id="ways-to-deepen-this" class="level3">
+<h3 class="anchored" data-anchor-id="ways-to-deepen-this">Ways to deepen this</h3>
+<ul>
+<li><strong>Overlay the null and alternative distributions</strong> and shade the <span class="math inline">\(\alpha\)</span> and <span class="math inline">\(\beta\)</span> regions, then vary <span class="math inline">\(n\)</span> and <span class="math inline">\(\rho\)</span> and watch the overlap change.</li>
+<li><strong>Look at <span class="math inline">\(p\)</span>-value distributions.</strong> Under the null, <span class="math inline">\(p\)</span> is uniform. Under an alternative, <span class="math inline">\(p\)</span> piles up near zero, more so with higher power. A <span class="math inline">\(p\)</span> of .03 therefore means different things depending on power.</li>
+<li><strong>Positive predictive value.</strong> The proportion of significant results that are true depends on power, <span class="math inline">\(\alpha\)</span>, and the prior proportion of true hypotheses <span class="citation" data-cites="ioannidis2005">[@ioannidis2005]</span>. This is different from <span class="math inline">\(\alpha\)</span>.</li>
+<li><strong>Instead of reading a non-significant result as “no effect”</strong>: report a confidence interval and ask which effects it excludes; use equivalence tests against a smallest effect size of interest <span class="citation" data-cites="lakens2017">[@lakens2017]</span>; run a sensitivity analysis (what is the smallest <span class="math inline">\(\rho\)</span> we had 80% power to detect?). Avoid <em>post hoc</em> observed power, which is a transformation of the <span class="math inline">\(p\)</span>-value <span class="citation" data-cites="hoenig2001">[@hoenig2001]</span>.</li>
+<li><strong>Plan power in advance</strong>, with the smallest effect size of interest justified before data collection <span class="citation" data-cites="cohen1988 cohen1992">[@cohen1988; @cohen1992]</span>.</li>
+</ul>
+</section>
+</section>
+<section id="part-c-what-we-see-when-only-significant-results-are-reported" class="level2">
+<h2 class="anchored" data-anchor-id="part-c-what-we-see-when-only-significant-results-are-reported">Part C: What we see when only significant results are reported</h2>
+<p>Part B asked what happens when the effect is real but power is low. Part C asks what happens to the estimates we actually see.</p>
+<section id="the-significance-filter" class="level3">
+<h3 class="anchored" data-anchor-id="the-significance-filter">The significance filter</h3>
+<p>Reuse the simulation from Part B (<span class="math inline">\(\rho = .3\)</span>, <span class="math inline">\(n = 20\)</span>), keep <span class="math inline">\(r\)</span> as well as <span class="math inline">\(t\)</span>, and imagine that only the significant studies reach print.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">3</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>rho <span class="ot">&lt;-</span> .<span class="dv">3</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">sim_studies</span>(<span class="dv">20</span>, rho, <span class="at">reps =</span> <span class="dv">10000</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(res<span class="sc">$</span>r)               <span class="co"># all studies: close to .3</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.2959991</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(res<span class="sc">$</span>r[res<span class="sc">$</span>sig])      <span class="co"># significant only: much larger</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.545431</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(res<span class="sc">$</span>r[res<span class="sc">$</span>sig]) <span class="sc">/</span> rho  <span class="co"># exaggeration ratio (Type M error)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1.818103</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(res<span class="sc">$</span>r[res<span class="sc">$</span>sig] <span class="sc">&lt;</span> <span class="dv">0</span>)  <span class="co"># share of significant results with the wrong sign (Type S error)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.003506038</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>brk <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>, <span class="at">by =</span> .<span class="dv">025</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(res<span class="sc">$</span>r, <span class="at">breaks =</span> brk, <span class="at">col =</span> <span class="st">"grey85"</span>, <span class="at">border =</span> <span class="st">"white"</span>,</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Which studies get reported?"</span>, <span class="at">xlab =</span> <span class="st">"observed r"</span>)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(res<span class="sc">$</span>r[res<span class="sc">$</span>sig], <span class="at">breaks =</span> brk, <span class="at">col =</span> <span class="st">"grey30"</span>, <span class="at">border =</span> <span class="st">"white"</span>, <span class="at">add =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> rho, <span class="at">lwd =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-filter" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-filter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="nhst-thought-process_files/figure-html/fig-filter-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-filter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Estimated r across 10,000 imagined studies (n = 20, rho = .3). Grey: all studies. Dark: significant studies only. The vertical line marks the true value.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Two points to make explicit:</p>
+<ul>
+<li>Nothing is wrong with any single study. The inflation comes from <em>selecting on significance</em>, whether by journals, authors, or the analyst.</li>
+<li>At <span class="math inline">\(n = 20\)</span> the significance threshold is <span class="math inline">\(|r| \approx .44\)</span>, so any significant result must be at least that large. The filter forces inflation. These are the Type M (magnitude) and Type S (sign) errors of <span class="citation" data-cites="gelman2014">@gelman2014</span>, and the problem of overestimated effects in low-powered research is also discussed by <span class="citation" data-cites="button2013">@button2013</span>.</li>
+</ul>
+</section>
+<section id="inflation-as-a-function-of-power" class="level3">
+<h3 class="anchored" data-anchor-id="inflation-as-a-function-of-power">Inflation as a function of power</h3>
+<p>Repeat the simulation across sample sizes and compare the exaggeration ratio with power.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">6</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>ns <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">30</span>, <span class="dv">50</span>, <span class="dv">85</span>, <span class="dv">200</span>, <span class="dv">500</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>infl <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(ns, <span class="cf">function</span>(k) {</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  s <span class="ot">&lt;-</span> <span class="fu">sim_studies</span>(k, .<span class="dv">3</span>, <span class="dv">5000</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">n =</span> k, <span class="at">power =</span> <span class="fu">mean</span>(s<span class="sc">$</span>sig), <span class="at">ratio =</span> <span class="fu">mean</span>(s<span class="sc">$</span>r[s<span class="sc">$</span>sig]) <span class="sc">/</span> .<span class="dv">3</span>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>infl</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    n  power    ratio
+1  20 0.2458 1.809115
+2  30 0.3698 1.556912
+3  50 0.5834 1.286576
+4  85 0.8118 1.102146
+5 200 0.9908 1.003560
+6 500 1.0000 0.995628</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(infl<span class="sc">$</span>power, infl<span class="sc">$</span>ratio, <span class="at">type =</span> <span class="st">"b"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"power"</span>, <span class="at">ylab =</span> <span class="st">"exaggeration ratio"</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">1</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-inflation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-inflation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="nhst-thought-process_files/figure-html/fig-inflation-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-inflation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Exaggeration ratio (mean significant r divided by true rho) against power, for rho = .3 at several sample sizes.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The ratio falls toward 1 as power rises. Low power makes significant results unreliable as well as rare.</p>
+</section>
+<section id="sampling-variability-across-n" class="level3">
+<h3 class="anchored" data-anchor-id="sampling-variability-across-n">Sampling variability across n</h3>
+<p>A second way to see the problem is to treat a large dataset as a stand-in population, draw repeated subsamples of different sizes, and look at the spread of the estimates at each <span class="math inline">\(n\)</span>. This is the approach used by <span class="citation" data-cites="marek2022">@marek2022</span> for brain-wide association studies. Here we simulate the population, but real ART3 and vocabulary data from a large sample would serve equally well.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>N_pop <span class="ot">&lt;-</span> <span class="dv">10000</span>; rho <span class="ot">&lt;-</span> .<span class="dv">3</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>px <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N_pop); py <span class="ot">&lt;-</span> rho <span class="sc">*</span> px <span class="sc">+</span> <span class="fu">sqrt</span>(<span class="dv">1</span> <span class="sc">-</span> rho<span class="sc">^</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">rnorm</span>(N_pop)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>pop_r <span class="ot">&lt;-</span> <span class="fu">cor</span>(px, py)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>ns <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">250</span>, <span class="dv">500</span>, <span class="dv">1000</span>)</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>band <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">sapply</span>(ns, <span class="cf">function</span>(k) {</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  rr <span class="ot">&lt;-</span> <span class="fu">replicate</span>(<span class="dv">2000</span>, { i <span class="ot">&lt;-</span> <span class="fu">sample</span>(N_pop, k); <span class="fu">cor</span>(px[i], py[i]) })</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">quantile</span>(rr, <span class="fu">c</span>(.<span class="dv">025</span>, .<span class="dv">5</span>, .<span class="dv">975</span>))</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ns, band[, <span class="dv">3</span>], <span class="at">type =</span> <span class="st">"b"</span>, <span class="at">log =</span> <span class="st">"x"</span>, <span class="at">ylim =</span> <span class="fu">range</span>(band),</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"sample size n (log scale)"</span>, <span class="at">ylab =</span> <span class="st">"sample r"</span>)</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(ns, band[, <span class="dv">1</span>], <span class="at">type =</span> <span class="st">"b"</span>)</span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(ns, band[, <span class="dv">2</span>], <span class="at">lty =</span> <span class="dv">3</span>)</span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> pop_r, <span class="at">lty =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-marek" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-marek-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="nhst-thought-process_files/figure-html/fig-marek-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-marek-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Middle 95% of sample correlations at each n, drawn from a simulated population of 10,000 people with rho = .3. The dashed line is the population value.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>What changes with <span class="math inline">\(n\)</span> is the <em>spread</em>, not just the average. A study at <span class="math inline">\(n = 20\)</span> is drawing from a very wide distribution.</p>
+</section>
+<section id="the-corridor-of-stability" class="level3">
+<h3 class="anchored" data-anchor-id="the-corridor-of-stability">The corridor of stability</h3>
+<p>The third view follows one study as data accumulate. <span class="citation" data-cites="schonbrodt2013">@schonbrodt2013</span> simulated studies in which participants are added one at a time, tracked the running correlation, and defined a “corridor of stability” around the true value. For each trajectory we can ask: after what sample size does the estimate never leave the corridor again?</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">4</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span> <span class="dv">1000</span>; rho <span class="ot">&lt;-</span> .<span class="dv">3</span>; w <span class="ot">&lt;-</span> .<span class="dv">1</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>traj <span class="ot">&lt;-</span> <span class="fu">replicate</span>(<span class="dv">100</span>, {</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N); y <span class="ot">&lt;-</span> rho <span class="sc">*</span> x <span class="sc">+</span> <span class="fu">sqrt</span>(<span class="dv">1</span> <span class="sc">-</span> rho<span class="sc">^</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">rnorm</span>(N)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sapply</span>(<span class="dv">20</span><span class="sc">:</span>N, <span class="cf">function</span>(k) <span class="fu">cor</span>(x[<span class="dv">1</span><span class="sc">:</span>k], y[<span class="dv">1</span><span class="sc">:</span>k]))</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="fu">matplot</span>(<span class="dv">20</span><span class="sc">:</span>N, traj, <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">lty =</span> <span class="dv">1</span>, <span class="at">col =</span> <span class="st">"#00000020"</span>,</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">xlab =</span> <span class="st">"n"</span>, <span class="at">ylab =</span> <span class="st">"running r"</span>)</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="fu">c</span>(rho <span class="sc">-</span> w, rho, rho <span class="sc">+</span> w), <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div id="fig-corridor" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-corridor-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="nhst-thought-process_files/figure-html/fig-corridor-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-corridor-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Running correlation in 100 imagined studies as participants are added one at a time (rho = .3). Dotted lines mark a corridor of plus or minus .1.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># sample size after which each trajectory stays inside the corridor</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>stable_n <span class="ot">&lt;-</span> <span class="fu">apply</span>(traj, <span class="dv">2</span>, <span class="cf">function</span>(r) {</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  out <span class="ot">&lt;-</span> <span class="fu">abs</span>(r <span class="sc">-</span> rho) <span class="sc">&gt;</span> w</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">any</span>(out)) <span class="dv">20</span> <span class="sc">+</span> <span class="fu">max</span>(<span class="fu">which</span>(out)) <span class="cf">else</span> <span class="dv">20</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(stable_n, <span class="fu">c</span>(.<span class="dv">5</span>, .<span class="dv">8</span>, .<span class="dv">95</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   50%    80%    95% 
+112.50 239.40 364.15 </code></pre>
+</div>
+</div>
+<p>These quantiles are themselves simulation estimates, based on only 100 trajectories, so the upper quantile in particular will move noticeably if you change the seed or the number of trajectories. Increase the number of trajectories to see them settle. The corridor result is something we can only obtain by simulation: there is no simple closed-form formula for “the sample size after which a running correlation never leaves the corridor again”.</p>
+<p>The funnel shape is the teaching tool: trajectories fan out at small <span class="math inline">\(n\)</span> and narrow later. <span class="citation" data-cites="schonbrodt2013">@schonbrodt2013</span> report that samples of roughly 250 are needed for correlations to stabilise within a corridor of <span class="math inline">\(\pm .1\)</span> for typical effect sizes. Compare that with what the simulation above gives for <span class="math inline">\(\rho = .3\)</span>.</p>
+<p>The two views complement each other. The previous section is cross-sectional (many independent studies at each <span class="math inline">\(n\)</span>). The corridor is longitudinal (one study growing). Both tell the same story about precision.</p>
+</section>
+<section id="things-to-state-alongside-these-results" class="level3">
+<h3 class="anchored" data-anchor-id="things-to-state-alongside-these-results">Things to state alongside these results</h3>
+<ul>
+<li>A corridor is about <strong>estimation precision</strong>, not the NHST decision rule. It reframes the problem rather than solving it within NHST.</li>
+<li>The stability <span class="math inline">\(n\)</span> depends on the corridor width, the confidence level, and <span class="math inline">\(\rho\)</span>. The sampling variance of <span class="math inline">\(r\)</span> is roughly <span class="math inline">\((1-\rho^2)^2/(n-1)\)</span>, so larger <span class="math inline">\(\rho\)</span> stabilises faster.</li>
+<li><span class="citation" data-cites="marek2022">@marek2022</span> concern brain-wide association studies, where true effects are tiny. Reading and vocabulary effects are far larger, so the numbers differ even though the logic transfers.</li>
+<li>All of the simulations assume bivariate normality and a well-defined population. Real samples (students, online panels) may not map onto that.</li>
+</ul>
+</section>
+<section id="what-to-do-about-it" class="level3">
+<h3 class="anchored" data-anchor-id="what-to-do-about-it">What to do about it</h3>
+<ul>
+<li>Plan for precision as well as power <span class="citation" data-cites="maxwell2008">[@maxwell2008]</span>.</li>
+<li>Use Registered Reports, so the publication decision does not depend on significance.</li>
+<li>Report effect sizes with confidence intervals, and interpret them in light of how wide the corridor is at your <span class="math inline">\(n\)</span>.</li>
+<li>Treat significant correlations from small samples as hypothesis-generating.</li>
+<li>Read a published <span class="math inline">\(r\)</span> from a small study as an upper-biased estimate. Early small-sample studies often report larger effects than later large replications (the winner’s curse).</li>
+</ul>
+</section>
+</section>
+<section id="where-this-leaves-nhst" class="level2">
+<h2 class="anchored" data-anchor-id="where-this-leaves-nhst">Where this leaves NHST</h2>
+<p>The framework developed here shows what NHST does well: it gives a decision procedure with a controlled long-run Type I error rate. It also shows where the difficulties lie.</p>
+<ol type="1">
+<li><strong>The null is probably never exactly true.</strong> After <span class="citation" data-cites="meehl1967">@meehl1967</span> and <span class="citation" data-cites="meehl1990">@meehl1990</span>, we may suspect that in the social sciences everything correlates with everything to some degree (the “crud factor”; see also <span class="citation" data-cites="lykken1968">@lykken1968</span> and <span class="citation" data-cites="orben2020">@orben2020</span>). With enough data, every test then rejects, and the question becomes whether an effect is large enough to matter.</li>
+<li><strong>Small samples are noisy.</strong> A significant <span class="math inline">\(t\)</span> at <span class="math inline">\(n = 20\)</span> is not a flaw, since 5% of true nulls will reach it by design. The problems are low power, selective reporting, and the inflated estimates that selection produces.</li>
+<li><strong>Small effects make all of this worse.</strong> Power falls and the exaggeration ratio rises when the true effect is small.</li>
+</ol>
+<p>Low-<span class="math inline">\(n\)</span> studies and huge-<span class="math inline">\(n\)</span> studies fail in opposite ways: the former cannot detect real effects, the latter detect trivial ones. In both cases, the useful questions concern estimation: how large is the effect, and how precisely do we know it?</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,329 @@
+---
+title: "`nhst-power.R`: null hypothesis significance testing and power"
+subtitle: "Walkthrough: how the script works, and how to use it in Quarto"
+format:
+  html:
+    code-fold: false
+    toc: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+## Aims
+
+`nhst-power.R` carries two correlation pairs from the battery simulated by
+`psych-battery-dgp.R` through the same null-hypothesis-significance-testing
+machinery, deliberately chosen to have different effect sizes:
+
+- **StuVoc1 – StuVoc2** — observed r ≈ .82 (two related vocabulary
+  subtests)
+- **StuVoc1 – GK** — observed r ≈ .67 (vocabulary and general
+  knowledge)
+
+The point of carrying *two* pairs through the same code, rather than one, is
+to make a fact about power concrete rather than asserted: the same test, the
+same decision rule, applied to two real correlations from the same battery,
+needs very different sample sizes to reach the same power, purely because
+their effect sizes differ. StuVoc1–StuVoc2 is reliably detectable at
+n = 10–20; StuVoc1–GK needs several times that. Nothing about the
+*test* changed between the two — only the thing being tested.
+
+This script adds **no new simulation machinery of its own**. Every function
+here is a thin orchestration layer over `psych-battery-dgp.R`'s
+`simulate_pair()`, `fit_focal_cor()`, `diagnose_cor_result()`, `run_sweep()`,
+`summarize_sweep()`, and `plot_metrics_vs_x()` — see
+[psych-battery-dgp-walkthrough.qmd](psych-battery-dgp-walkthrough.qmd) for
+how those are built. What's new here is purely the *framing*: one simulated
+study and its decision, many studies at one sample size (a direct replica of
+@vermeiren2023's own power illustration, their "Power considerations"
+figure), and many studies across a sample-size grid (power curves).
+
+After working through it, you should be able to:
+
+- explain, in your own words, why "not significant" and "the null is true"
+  are different claims, using this script's own true_corr = 0 curves as the
+  concrete counter-example;
+- generate a corridor plot and a power curve for a battery pair of your
+  choosing, and read off roughly what sample size reaches 80% power;
+- explain why StuVoc1–StuVoc2 and StuVoc1–GK need such different
+  sample sizes to reach the same power, despite using an identical testing
+  procedure.
+
+## Prerequisites / assumptions
+
+- **Packages**: `ggplot2` only — no new dependency beyond what
+  `psych-battery-dgp.R` already requires.
+- **Sourcing**: `psych-battery-dgp.R` must be sourced first — this
+  script uses `default_r_obs_matrix()`, `simulate_pair()`, `fit_focal_cor()`,
+  `diagnose_cor_result()`, `run_sweep()`, `summarize_sweep()`, and
+  `plot_metrics_vs_x()` directly.
+- **Reader background**: familiarity with p-values, confidence intervals,
+  and the idea of statistical power is assumed (not re-derived here); see
+  [psych-battery-dgp-walkthrough.qmd](psych-battery-dgp-walkthrough.qmd) for
+  the underlying simulation model if that's the unfamiliar part.
+
+```{r}
+#| label: source-script
+source("psych-battery-dgp.R")
+source("nhst-power.R")
+```
+
+## How it works: the process
+
+```{mermaid}
+flowchart LR
+    A["psych-battery-dgp.R\nsimulate_pair(), fit_focal_cor(),\ndiagnose_cor_result(), run_sweep(),\nsummarize_sweep(), plot_metrics_vs_x()"] --> B["summarize_single_study() /\nplot_single_study()\none simulated dataset,\none cor.test(), one decision"]
+    A --> C["plot_corridor()\nrun_sweep() at one true_corr,\nmany n -- a Vermeiren-Fig.-1-style\nscatter coloured by significance"]
+    A --> D["plot_power_curves()\nrun_sweep() + summarize_sweep()\nacross a full n grid,\ntrue_corr = 0 and the pair's real r"]
+```
+
+Three views of the same underlying machinery, increasing in scope: one
+study (`B`) shows what a single p-value is actually attached to; the
+corridor (`C`) shows what happens if that same study were run many times at
+one sample size; the power curves (`D`) show what happens across a whole
+range of sample sizes, with the `true_corr = 0` curve kept visible
+throughout as the benchmark for "how often would this procedure falsely
+claim an effect that isn't there."
+
+## Element-by-element walkthrough
+
+### Plain-language decisions: `format_pvalue()` and `interpret_decision()`
+
+```{r}
+#| label: show-interpret-decision
+#| eval: false
+interpret_decision <- function(p_value, alpha = 0.05) {
+  p_label <- format_pvalue(p_value)
+  if (p_value < alpha) {
+    sprintf("reject H0 (%s, threshold %.2f) -- call this result \"significant\"", p_label, alpha)
+  } else {
+    sprintf("fail to reject H0 (%s, threshold %.2f) -- call this result \"not significant\"", p_label, alpha)
+  }
+}
+```
+
+A small thing worth calling out: both `summarize_single_study()` and
+`plot_single_study()` call this one function rather than each writing their
+own "significant"/"not significant" string, so the wording a reader sees on
+a figure matches the wording in the accompanying table exactly —
+avoiding a common source of confusion where a table says "significant" and
+a figure caption says something subtly different (or vice versa).
+
+```{r}
+#| label: demo-interpret-decision
+interpret_decision(0.002)
+interpret_decision(0.31)
+```
+
+### One study: `summarize_single_study()` and `plot_single_study()`
+
+```{r}
+#| label: demo-single-study
+summarize_single_study("StuVoc1", "GK", n = 200, seed = 1)
+```
+
+```{r}
+#| label: demo-plot-single-study
+#| fig-width: 6
+#| fig-height: 5
+plot_single_study("StuVoc1", "GK", n = 200, seed = 1)
+```
+
+This is deliberately the simplest possible figure in the whole project: one
+scatterplot, one fitted line, one estimate/CI/p-value annotated directly on
+it. Everything downstream — the corridor plot, the power curves —
+is just this exact same procedure, repeated many times and summarized.
+Nothing new is introduced at the level of *what a single study's result is*;
+only *how many times it's repeated* changes.
+
+::: {.callout-note title="Same n, different decision, just from a different seed"}
+Re-run the chunk above with `seed = 6` instead of `seed = 1`. At `n = 200`
+and the pair's true correlation of .67, both calls will almost certainly
+still be significant (this pair is easy to detect) — but try the same
+comparison at `n = 15` and the decision can flip between seeds. That
+flip is not a sign anything went wrong; it's sampling error, made visible at
+the level of a single reported decision rather than averaged away across
+many studies, which is exactly what the corridor plot below is built to
+show systematically.
+:::
+
+### Many studies, one N — the corridor plot: `plot_corridor()`
+
+This is the script's most distinctive piece of code — a direct replica
+of @vermeiren2023's own "Power considerations" figure, which plotted 2000
+simulated studies' correlations against sample size, coloured by
+significance, and reported that at N=40 only about a quarter of studies
+testing a true r = .2 came back significant. Worth reading in full:
+
+```{r}
+#| label: show-plot-corridor-full
+plot_corridor
+```
+
+It doesn't re-simulate anything new; it just calls `run_sweep()` (from
+`psych-battery-dgp.R`) at a single `true_corr` value across a grid of sample
+sizes, and plots the *raw*, per-replicate output directly — one point
+per simulated study — rather than summarizing it first.
+
+```{r}
+#| label: demo-plot-corridor
+#| fig-width: 7
+#| fig-height: 5
+plot_corridor("StuVoc1", "GK", n_grid = c(10, 15, 20, 30, 40), reps = 200, seed_base = 2)
+```
+
+::: {.callout-note title="Why n = 10–40 here, not Vermeiren's 40–400"}
+@vermeiren2023's own figure swept N from 40 to 400 because they were
+illustrating power for a true correlation of r = .2 — a much weaker
+effect than any pair in this battery. StuVoc1–GK's true correlation
+(≈ .67) is strong enough that by N=40 almost every simulated study is
+already significant — try `plot_corridor("StuVoc1", "GK", n_grid = c(40,
+100, 200, 400), reps = 200)` yourself and compare: it comes out solid red
+throughout, with no mix left to see. Sweeping a *smaller* n range here is
+what's needed to see the mix of significant and non-significant outcomes
+that makes a corridor plot informative — the right N range to sweep
+depends on the effect size being investigated, not on any fixed
+convention.
+:::
+
+### Many studies, many N — power curves: `plot_power_curves()`
+
+```{r}
+#| label: show-plot-power-curves-core
+#| eval: false
+if (is.null(true_corr_grid)) {
+  true_corr_grid <- c(0, unname(default_r_obs_matrix()[var_x, var_y]))
+}
+sweep <- run_sweep(n_grid = n_grid, true_corr_grid = true_corr_grid, ...)
+summ  <- summarize_sweep(sweep)
+plot_metrics_vs_x(summ, x = "n", metrics = "power_or_type1", color_by = "true_corr") +
+  geom_hline(yintercept = alpha, linetype = "dotted", color = "gray40")
+```
+
+The default `true_corr_grid` is worth noticing: it's always `c(0, <this
+pair's real correlation>)`, never just the real correlation on its own. That
+default isn't a convenience shortcut — it's the whole point of this
+figure. A power curve shown on its own answers "how often would we detect
+this real effect?" A power curve with the null included alongside it also
+answers the question a reader is more likely to actually need: "how do I
+tell a detected real effect apart from a false alarm, at this same sample
+size?" The dotted horizontal line at `alpha` gives the second curve a
+reference point — a well-behaved false-positive rate should hover near
+it regardless of `n`, which is a different (and much flatter) shape than
+power ever takes.
+
+```{r}
+#| label: demo-power-curves-stuvoc1-stuvoc2
+#| fig-width: 7
+#| fig-height: 4.2
+plot_power_curves("StuVoc1", "StuVoc2", n_grid = c(10, 20, 40, 80), reps = 300, seed_base = 3)
+```
+
+```{r}
+#| label: demo-power-curves-stuvoc1-gk
+#| fig-width: 7
+#| fig-height: 4.2
+plot_power_curves("StuVoc1", "GK", n_grid = c(20, 50, 100, 200, 400), reps = 300, seed_base = 4)
+```
+
+Read the two figures side by side: StuVoc1–StuVoc2's power curve is
+already near 1 by `n = 20`; StuVoc1–GK needs `n` in the low hundreds to
+get there. Both true_corr = 0 curves, meanwhile, sit near the dotted .05
+line throughout — flat, low, and (within simulation noise) unaffected
+by `n`, which is exactly what a false-positive rate should look like when
+nothing about the testing procedure has changed.
+
+## Quarto usage / integration
+
+This script is standalone — like `sampling-measurement-error.R`, it
+isn't currently sourced into `doing-being-science.qmd`. A typical setup
+chunk:
+
+```r
+source("psych-battery-dgp.R")
+source("nhst-power.R")
+```
+
+and then any of `summarize_single_study()`, `plot_single_study()`,
+`plot_corridor()`, or `plot_power_curves()`, each returning a plain data
+frame or `ggplot` object respectively.
+
+### Parameter quick reference
+
+| Function | Parameter | Default | Meaning |
+|---|---|---|---|
+| `summarize_single_study()` / `plot_single_study()` | `var_x`, `var_y` | — | The focal test pair. |
+| | `n` | — | Sample size for this one study. |
+| | `true_corr` | `NULL` | Population *observed*-score correlation to simulate from; `NULL` uses the pair's Vermeiren-default value. |
+| | `alpha` | `0.05` | Significance threshold. |
+| `plot_corridor()` | `n_grid` | — | Sample sizes to compare (one row of points each). |
+| | `reps` | `150` | Independent simulated studies per sample size. |
+| | `true_corr` | `NULL` | A single population correlation (not a grid — this figure fixes the effect size and varies `n`). |
+| `plot_power_curves()` | `n_grid` | — | Sample sizes to sweep. |
+| | `true_corr_grid` | `NULL` | Correlations to compare; `NULL` uses `c(0, <pair's Vermeiren-default r>)`, always including the null. |
+| | `reliability_grid` | `NULL` | Reliability override for both tests; `NULL` uses Vermeiren defaults. |
+| | `reps` | `300` | Replicate studies per grid cell. |
+| *(all four)* | `seed` / `seed_base` | `NULL` / `1234` | Reproducibility (single-study functions take `seed`; sweep-based functions take `seed_base`, passed through to `run_sweep()`). |
+
+### Common errors
+
+This script introduces no new validation of its own — every
+`stopifnot()`/`warning()` a user might see originates in `psych-battery-dgp.R`
+(see its own [Common errors
+table](psych-battery-dgp-walkthrough.qmd#common-errors)), most commonly:
+
+| Message | Likely cause |
+|---|---|
+| `` `var_x`/`var_y` must each be one of StuVoc1, StuVoc2, GK, ART3 `` | Misspelled or unsupported test name passed to any function here. |
+| `` `var_x` and `var_y` must be different tests `` | The same test name passed twice as both `var_x` and `var_y`. |
+| Warning: `achieved reliability (...) differs from the requested target (...)` | A `reliability`/`reliability_grid` value pushed calibration outside its tolerance — see `psych-battery-dgp.R`'s `calibrate_ability_general()`. |
+
+## Exercises
+
+1. Call `summarize_single_study("StuVoc1", "StuVoc2", n = 15, seed = 1)` for
+   several different seeds (1 through 10). How many of the ten come back
+   significant? Does that roughly match what `plot_power_curves()` predicts
+   for `n = 15` on this pair?
+2. Build a corridor plot for StuVoc1–ART3 (r ≈ .52) using
+   `n_grid = c(10, 20, 40, 80, 150)`. Compare the N at which it turns mostly
+   red (significant) to the StuVoc1–GK corridor above — does the
+   weaker correlation need a larger N to reach the same mix, as you'd
+   expect?
+3. Run `plot_power_curves("StuVoc1", "GK", n_grid = c(...), reliability_grid = 0.5)`
+   (a reliability well below the Vermeiren default for both tests) and
+   compare to the default-reliability power curve above. Which error
+   source — sampling or measurement — is responsible for the
+   difference, and does that match what
+   [sampling-measurement-error-walkthrough.qmd](sampling-measurement-error-walkthrough.qmd)
+   would predict?
+4. At what sample size does StuVoc1–GK's power first exceed 80%? Use
+   `plot_power_curves()`'s underlying `run_sweep()`/`summarize_sweep()` calls
+   directly (rather than reading it off the plot) to find a more precise
+   answer.
+5. Pick an `alpha` other than .05 (e.g. .01 or .10) and re-run
+   `plot_power_curves("StuVoc1", "StuVoc2", ...)` with it. What happens to
+   both the true_corr = 0 curve and the true_corr = .82 curve, and why do
+   they move in opposite directions?
+
+## See also
+
+- [psych-battery-dgp-walkthrough.qmd](psych-battery-dgp-walkthrough.qmd) —
+  the shared simulation/sweep engine this script orchestrates
+  (`simulate_pair()`, `run_sweep()`, `summarize_sweep()`,
+  `plot_metrics_vs_x()`), including its own validation against
+  @vermeiren2023's reported power benchmarks.
+- [sampling-measurement-error-walkthrough.qmd](sampling-measurement-error-walkthrough.qmd)
+  — the measurement-error/sampling-error distinction this script's
+  `reliability_grid` argument connects to (Exercise 3 above).
+- [error-rates-process-control-walkthrough.qmd](error-rates-process-control-walkthrough.qmd)
+  — takes the same `run_sweep()`/`summarize_sweep()` engine used here and
+  reframes power, Type I rate, sign consistency, and coverage as long-run
+  Neyman–Pearson process-control error rates, varying all three dials
+  together rather than one pair at a time.
+
+## References

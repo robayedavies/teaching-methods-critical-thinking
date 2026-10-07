@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>nhst-power.R: null hypothesis significance testing and power</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="nhst-power-walkthrough_files/libs/clipboard/clipboard.min.js"></script>
+<script src="nhst-power-walkthrough_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="nhst-power-walkthrough_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="nhst-power-walkthrough_files/libs/quarto-html/popper.min.js"></script>
+<script src="nhst-power-walkthrough_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="nhst-power-walkthrough_files/libs/quarto-html/anchor.min.js"></script>
+<link href="nhst-power-walkthrough_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="nhst-power-walkthrough_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="nhst-power-walkthrough_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="nhst-power-walkthrough_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="nhst-power-walkthrough_files/libs/bootstrap/bootstrap-917079515d91bccb85b543faf8aa8bb6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="nhst-power-walkthrough_files/libs/quarto-diagram/mermaid.min.js"></script>
+<script src="nhst-power-walkthrough_files/libs/quarto-diagram/mermaid-init.js"></script>
+<link href="nhst-power-walkthrough_files/libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#aims" id="toc-aims" class="nav-link active" data-scroll-target="#aims">Aims</a></li>
+  <li><a href="#prerequisites-assumptions" id="toc-prerequisites-assumptions" class="nav-link" data-scroll-target="#prerequisites-assumptions">Prerequisites / assumptions</a></li>
+  <li><a href="#how-it-works-the-process" id="toc-how-it-works-the-process" class="nav-link" data-scroll-target="#how-it-works-the-process">How it works: the process</a></li>
+  <li><a href="#element-by-element-walkthrough" id="toc-element-by-element-walkthrough" class="nav-link" data-scroll-target="#element-by-element-walkthrough">Element-by-element walkthrough</a>
+  <ul class="collapse">
+  <li><a href="#plain-language-decisions-format_pvalue-and-interpret_decision" id="toc-plain-language-decisions-format_pvalue-and-interpret_decision" class="nav-link" data-scroll-target="#plain-language-decisions-format_pvalue-and-interpret_decision">Plain-language decisions: <code>format_pvalue()</code> and <code>interpret_decision()</code></a></li>
+  <li><a href="#one-study-summarize_single_study-and-plot_single_study" id="toc-one-study-summarize_single_study-and-plot_single_study" class="nav-link" data-scroll-target="#one-study-summarize_single_study-and-plot_single_study">One study: <code>summarize_single_study()</code> and <code>plot_single_study()</code></a></li>
+  <li><a href="#many-studies-one-n-the-corridor-plot-plot_corridor" id="toc-many-studies-one-n-the-corridor-plot-plot_corridor" class="nav-link" data-scroll-target="#many-studies-one-n-the-corridor-plot-plot_corridor">Many studies, one N — the corridor plot: <code>plot_corridor()</code></a></li>
+  <li><a href="#many-studies-many-n-power-curves-plot_power_curves" id="toc-many-studies-many-n-power-curves-plot_power_curves" class="nav-link" data-scroll-target="#many-studies-many-n-power-curves-plot_power_curves">Many studies, many N — power curves: <code>plot_power_curves()</code></a></li>
+  </ul></li>
+  <li><a href="#quarto-usage-integration" id="toc-quarto-usage-integration" class="nav-link" data-scroll-target="#quarto-usage-integration">Quarto usage / integration</a>
+  <ul class="collapse">
+  <li><a href="#parameter-quick-reference" id="toc-parameter-quick-reference" class="nav-link" data-scroll-target="#parameter-quick-reference">Parameter quick reference</a></li>
+  <li><a href="#common-errors" id="toc-common-errors" class="nav-link" data-scroll-target="#common-errors">Common errors</a></li>
+  </ul></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises">Exercises</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See also</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><code>nhst-power.R</code>: null hypothesis significance testing and power</h1>
+<p class="subtitle lead">Walkthrough: how the script works, and how to use it in Quarto</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="aims" class="level2">
+<h2 class="anchored" data-anchor-id="aims">Aims</h2>
+<p><code>nhst-power.R</code> carries two correlation pairs from the battery simulated by <code>psych-battery-dgp.R</code> through the same null-hypothesis-significance-testing machinery, deliberately chosen to have different effect sizes:</p>
+<ul>
+<li><strong>StuVoc1 – StuVoc2</strong> — observed r ≈ .82 (two related vocabulary subtests)</li>
+<li><strong>StuVoc1 – GK</strong> — observed r ≈ .67 (vocabulary and general knowledge)</li>
+</ul>
+<p>The point of carrying <em>two</em> pairs through the same code, rather than one, is to make a fact about power concrete rather than asserted: the same test, the same decision rule, applied to two real correlations from the same battery, needs very different sample sizes to reach the same power, purely because their effect sizes differ. StuVoc1–StuVoc2 is reliably detectable at n = 10–20; StuVoc1–GK needs several times that. Nothing about the <em>test</em> changed between the two — only the thing being tested.</p>
+<p>This script adds <strong>no new simulation machinery of its own</strong>. Every function here is a thin orchestration layer over <code>psych-battery-dgp.R</code>’s <code>simulate_pair()</code>, <code>fit_focal_cor()</code>, <code>diagnose_cor_result()</code>, <code>run_sweep()</code>, <code>summarize_sweep()</code>, and <code>plot_metrics_vs_x()</code> — see <a href="psych-battery-dgp-walkthrough.qmd">psych-battery-dgp-walkthrough.qmd</a> for how those are built. What’s new here is purely the <em>framing</em>: one simulated study and its decision, many studies at one sample size (a direct replica of <span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>’s own power illustration, their “Power considerations” figure), and many studies across a sample-size grid (power curves).</p>
+<p>After working through it, you should be able to:</p>
+<ul>
+<li>explain, in your own words, why “not significant” and “the null is true” are different claims, using this script’s own true_corr = 0 curves as the concrete counter-example;</li>
+<li>generate a corridor plot and a power curve for a battery pair of your choosing, and read off roughly what sample size reaches 80% power;</li>
+<li>explain why StuVoc1–StuVoc2 and StuVoc1–GK need such different sample sizes to reach the same power, despite using an identical testing procedure.</li>
+</ul>
+</section>
+<section id="prerequisites-assumptions" class="level2">
+<h2 class="anchored" data-anchor-id="prerequisites-assumptions">Prerequisites / assumptions</h2>
+<ul>
+<li><strong>Packages</strong>: <code>ggplot2</code> only — no new dependency beyond what <code>psych-battery-dgp.R</code> already requires.</li>
+<li><strong>Sourcing</strong>: <code>psych-battery-dgp.R</code> must be sourced first — this script uses <code>default_r_obs_matrix()</code>, <code>simulate_pair()</code>, <code>fit_focal_cor()</code>, <code>diagnose_cor_result()</code>, <code>run_sweep()</code>, <code>summarize_sweep()</code>, and <code>plot_metrics_vs_x()</code> directly.</li>
+<li><strong>Reader background</strong>: familiarity with p-values, confidence intervals, and the idea of statistical power is assumed (not re-derived here); see <a href="psych-battery-dgp-walkthrough.qmd">psych-battery-dgp-walkthrough.qmd</a> for the underlying simulation model if that’s the unfamiliar part.</li>
+</ul>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"psych-battery-dgp.R"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"nhst-power.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="how-it-works-the-process" class="level2">
+<h2 class="anchored" data-anchor-id="how-it-works-the-process">How it works: the process</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    A["psych-battery-dgp.R\nsimulate_pair(), fit_focal_cor(),\ndiagnose_cor_result(), run_sweep(),\nsummarize_sweep(), plot_metrics_vs_x()"] --&gt; B["summarize_single_study() /\nplot_single_study()\none simulated dataset,\none cor.test(), one decision"]
+    A --&gt; C["plot_corridor()\nrun_sweep() at one true_corr,\nmany n -- a Vermeiren-Fig.-1-style\nscatter coloured by significance"]
+    A --&gt; D["plot_power_curves()\nrun_sweep() + summarize_sweep()\nacross a full n grid,\ntrue_corr = 0 and the pair's real r"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>Three views of the same underlying machinery, increasing in scope: one study (<code>B</code>) shows what a single p-value is actually attached to; the corridor (<code>C</code>) shows what happens if that same study were run many times at one sample size; the power curves (<code>D</code>) show what happens across a whole range of sample sizes, with the <code>true_corr = 0</code> curve kept visible throughout as the benchmark for “how often would this procedure falsely claim an effect that isn’t there.”</p>
+</section>
+<section id="element-by-element-walkthrough" class="level2">
+<h2 class="anchored" data-anchor-id="element-by-element-walkthrough">Element-by-element walkthrough</h2>
+<section id="plain-language-decisions-format_pvalue-and-interpret_decision" class="level3">
+<h3 class="anchored" data-anchor-id="plain-language-decisions-format_pvalue-and-interpret_decision">Plain-language decisions: <code>format_pvalue()</code> and <code>interpret_decision()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>interpret_decision <span class="ot">&lt;-</span> <span class="cf">function</span>(p_value, <span class="at">alpha =</span> <span class="fl">0.05</span>) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  p_label <span class="ot">&lt;-</span> <span class="fu">format_pvalue</span>(p_value)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (p_value <span class="sc">&lt;</span> alpha) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sprintf</span>(<span class="st">"reject H0 (%s, threshold %.2f) -- call this result </span><span class="sc">\"</span><span class="st">significant</span><span class="sc">\"</span><span class="st">"</span>, p_label, alpha)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sprintf</span>(<span class="st">"fail to reject H0 (%s, threshold %.2f) -- call this result </span><span class="sc">\"</span><span class="st">not significant</span><span class="sc">\"</span><span class="st">"</span>, p_label, alpha)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A small thing worth calling out: both <code>summarize_single_study()</code> and <code>plot_single_study()</code> call this one function rather than each writing their own “significant”/“not significant” string, so the wording a reader sees on a figure matches the wording in the accompanying table exactly — avoiding a common source of confusion where a table says “significant” and a figure caption says something subtly different (or vice versa).</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">interpret_decision</span>(<span class="fl">0.002</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "reject H0 (p = 0.002, threshold 0.05) -- call this result \"significant\""</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">interpret_decision</span>(<span class="fl">0.31</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "fail to reject H0 (p = 0.310, threshold 0.05) -- call this result \"not significant\""</code></pre>
+</div>
+</div>
+</section>
+<section id="one-study-summarize_single_study-and-plot_single_study" class="level3">
+<h3 class="anchored" data-anchor-id="one-study-summarize_single_study-and-plot_single_study">One study: <code>summarize_single_study()</code> and <code>plot_single_study()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summarize_single_study</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n =</span> <span class="dv">200</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    var_x var_y   n true_corr  estimate    ci_low  ci_high      p_value
+1 StuVoc1    GK 200      0.67 0.6422568 0.5527718 0.717099 1.187256e-24
+  significant
+1        TRUE
+                                                                decision
+1 reject H0 (p &lt; .001, threshold 0.05) -- call this result "significant"</code></pre>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_single_study</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n =</span> <span class="dv">200</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
+</div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="nhst-power-walkthrough_files/figure-html/demo-plot-single-study-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="576"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>This is deliberately the simplest possible figure in the whole project: one scatterplot, one fitted line, one estimate/CI/p-value annotated directly on it. Everything downstream — the corridor plot, the power curves — is just this exact same procedure, repeated many times and summarized. Nothing new is introduced at the level of <em>what a single study’s result is</em>; only <em>how many times it’s repeated</em> changes.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Same n, different decision, just from a different seed">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Same n, different decision, just from a different seed
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Re-run the chunk above with <code>seed = 6</code> instead of <code>seed = 1</code>. At <code>n = 200</code> and the pair’s true correlation of .67, both calls will almost certainly still be significant (this pair is easy to detect) — but try the same comparison at <code>n = 15</code> and the decision can flip between seeds. That flip is not a sign anything went wrong; it’s sampling error, made visible at the level of a single reported decision rather than averaged away across many studies, which is exactly what the corridor plot below is built to show systematically.</p>
+</div>
+</div>
+</section>
+<section id="many-studies-one-n-the-corridor-plot-plot_corridor" class="level3">
+<h3 class="anchored" data-anchor-id="many-studies-one-n-the-corridor-plot-plot_corridor">Many studies, one N — the corridor plot: <code>plot_corridor()</code></h3>
+<p>This is the script’s most distinctive piece of code — a direct replica of <span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>‘s own “Power considerations” figure, which plotted 2000 simulated studies’ correlations against sample size, coloured by significance, and reported that at N=40 only about a quarter of studies testing a true r = .2 came back significant. Worth reading in full:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>plot_corridor</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>function (var_x, var_y, n_grid, reps = 150, true_corr = NULL, 
+    reliability = NULL, alpha = 0.05, seed_base = 1234) 
+{
+    tc &lt;- if (is.null(true_corr)) 
+        unname(default_r_obs_matrix()[var_x, var_y])
+    else true_corr
+    rel_grid &lt;- if (is.null(reliability)) 
+        NULL
+    else reliability
+    raw &lt;- run_sweep(n_grid = n_grid, true_corr_grid = tc, reliability_grid = rel_grid, 
+        reps = reps, var_x = var_x, var_y = var_y, alpha = alpha, 
+        seed_base = seed_base)
+    raw$significant_label &lt;- factor(raw$significant, levels = c(FALSE, 
+        TRUE), labels = c("not significant", "significant"))
+    ggplot(raw, aes(x = estimate, y = factor(n), color = significant_label, 
+        shape = significant_label)) + geom_vline(xintercept = tc, 
+        color = "gray40", linetype = "dotted") + geom_jitter(height = 0.15, 
+        alpha = 0.6) + scale_color_manual(values = c(`not significant` = "#3B6EA5", 
+        significant = "#B23A48"), name = NULL) + scale_shape_manual(values = c(`not significant` = 16, 
+        significant = 17), name = NULL) + labs(x = sprintf("Observed r(%s, %s)", 
+        var_x, var_y), y = "Sample size (n)", subtitle = sprintf("%d simulated studies per n; true (population) correlation = %.2f (dotted line)", 
+        reps, tc)) + theme_minimal()
+}</code></pre>
+</div>
+</div>
+<p>It doesn’t re-simulate anything new; it just calls <code>run_sweep()</code> (from <code>psych-battery-dgp.R</code>) at a single <code>true_corr</code> value across a grid of sample sizes, and plots the <em>raw</em>, per-replicate output directly — one point per simulated study — rather than summarizing it first.</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_corridor</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">30</span>, <span class="dv">40</span>), <span class="at">reps =</span> <span class="dv">200</span>, <span class="at">seed_base =</span> <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="nhst-power-walkthrough_files/figure-html/demo-plot-corridor-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Why n = 10–40 here, not Vermeiren's 40–400">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why n = 10–40 here, not Vermeiren’s 40–400
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>’s own figure swept N from 40 to 400 because they were illustrating power for a true correlation of r = .2 — a much weaker effect than any pair in this battery. StuVoc1–GK’s true correlation (≈ .67) is strong enough that by N=40 almost every simulated study is already significant — try <code>plot_corridor("StuVoc1", "GK", n_grid = c(40, 100, 200, 400), reps = 200)</code> yourself and compare: it comes out solid red throughout, with no mix left to see. Sweeping a <em>smaller</em> n range here is what’s needed to see the mix of significant and non-significant outcomes that makes a corridor plot informative — the right N range to sweep depends on the effect size being investigated, not on any fixed convention.</p>
+</div>
+</div>
+</section>
+<section id="many-studies-many-n-power-curves-plot_power_curves" class="level3">
+<h3 class="anchored" data-anchor-id="many-studies-many-n-power-curves-plot_power_curves">Many studies, many N — power curves: <code>plot_power_curves()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">is.null</span>(true_corr_grid)) {</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  true_corr_grid <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fu">unname</span>(<span class="fu">default_r_obs_matrix</span>()[var_x, var_y]))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>sweep <span class="ot">&lt;-</span> <span class="fu">run_sweep</span>(<span class="at">n_grid =</span> n_grid, <span class="at">true_corr_grid =</span> true_corr_grid, ...)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>summ  <span class="ot">&lt;-</span> <span class="fu">summarize_sweep</span>(sweep)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_metrics_vs_x</span>(summ, <span class="at">x =</span> <span class="st">"n"</span>, <span class="at">metrics =</span> <span class="st">"power_or_type1"</span>, <span class="at">color_by =</span> <span class="st">"true_corr"</span>) <span class="sc">+</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> alpha, <span class="at">linetype =</span> <span class="st">"dotted"</span>, <span class="at">color =</span> <span class="st">"gray40"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The default <code>true_corr_grid</code> is worth noticing: it’s always <code>c(0, &lt;this pair's real correlation&gt;)</code>, never just the real correlation on its own. That default isn’t a convenience shortcut — it’s the whole point of this figure. A power curve shown on its own answers “how often would we detect this real effect?” A power curve with the null included alongside it also answers the question a reader is more likely to actually need: “how do I tell a detected real effect apart from a false alarm, at this same sample size?” The dotted horizontal line at <code>alpha</code> gives the second curve a reference point — a well-behaved false-positive rate should hover near it regardless of <code>n</code>, which is a different (and much flatter) shape than power ever takes.</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_power_curves</span>(<span class="st">"StuVoc1"</span>, <span class="st">"StuVoc2"</span>, <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">40</span>, <span class="dv">80</span>), <span class="at">reps =</span> <span class="dv">300</span>, <span class="at">seed_base =</span> <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="nhst-power-walkthrough_files/figure-html/demo-power-curves-stuvoc1-stuvoc2-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_power_curves</span>(<span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>, <span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">20</span>, <span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">400</span>), <span class="at">reps =</span> <span class="dv">300</span>, <span class="at">seed_base =</span> <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="nhst-power-walkthrough_files/figure-html/demo-power-curves-stuvoc1-gk-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Read the two figures side by side: StuVoc1–StuVoc2’s power curve is already near 1 by <code>n = 20</code>; StuVoc1–GK needs <code>n</code> in the low hundreds to get there. Both true_corr = 0 curves, meanwhile, sit near the dotted .05 line throughout — flat, low, and (within simulation noise) unaffected by <code>n</code>, which is exactly what a false-positive rate should look like when nothing about the testing procedure has changed.</p>
+</section>
+</section>
+<section id="quarto-usage-integration" class="level2">
+<h2 class="anchored" data-anchor-id="quarto-usage-integration">Quarto usage / integration</h2>
+<p>This script is standalone — like <code>sampling-measurement-error.R</code>, it isn’t currently sourced into <code>doing-being-science.qmd</code>. A typical setup chunk:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"psych-battery-dgp.R"</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"nhst-power.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>and then any of <code>summarize_single_study()</code>, <code>plot_single_study()</code>, <code>plot_corridor()</code>, or <code>plot_power_curves()</code>, each returning a plain data frame or <code>ggplot</code> object respectively.</p>
+<section id="parameter-quick-reference" class="level3">
+<h3 class="anchored" data-anchor-id="parameter-quick-reference">Parameter quick reference</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Parameter</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>summarize_single_study()</code> / <code>plot_single_study()</code></td>
+<td><code>var_x</code>, <code>var_y</code></td>
+<td>—</td>
+<td>The focal test pair.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>n</code></td>
+<td>—</td>
+<td>Sample size for this one study.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>true_corr</code></td>
+<td><code>NULL</code></td>
+<td>Population <em>observed</em>-score correlation to simulate from; <code>NULL</code> uses the pair’s Vermeiren-default value.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>alpha</code></td>
+<td><code>0.05</code></td>
+<td>Significance threshold.</td>
+</tr>
+<tr class="odd">
+<td><code>plot_corridor()</code></td>
+<td><code>n_grid</code></td>
+<td>—</td>
+<td>Sample sizes to compare (one row of points each).</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>reps</code></td>
+<td><code>150</code></td>
+<td>Independent simulated studies per sample size.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>true_corr</code></td>
+<td><code>NULL</code></td>
+<td>A single population correlation (not a grid — this figure fixes the effect size and varies <code>n</code>).</td>
+</tr>
+<tr class="even">
+<td><code>plot_power_curves()</code></td>
+<td><code>n_grid</code></td>
+<td>—</td>
+<td>Sample sizes to sweep.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>true_corr_grid</code></td>
+<td><code>NULL</code></td>
+<td>Correlations to compare; <code>NULL</code> uses <code>c(0, &lt;pair's Vermeiren-default r&gt;)</code>, always including the null.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>reliability_grid</code></td>
+<td><code>NULL</code></td>
+<td>Reliability override for both tests; <code>NULL</code> uses Vermeiren defaults.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>reps</code></td>
+<td><code>300</code></td>
+<td>Replicate studies per grid cell.</td>
+</tr>
+<tr class="even">
+<td><em>(all four)</em></td>
+<td><code>seed</code> / <code>seed_base</code></td>
+<td><code>NULL</code> / <code>1234</code></td>
+<td>Reproducibility (single-study functions take <code>seed</code>; sweep-based functions take <code>seed_base</code>, passed through to <code>run_sweep()</code>).</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="common-errors" class="level3">
+<h3 class="anchored" data-anchor-id="common-errors">Common errors</h3>
+<p>This script introduces no new validation of its own — every <code>stopifnot()</code>/<code>warning()</code> a user might see originates in <code>psych-battery-dgp.R</code> (see its own <a href="psych-battery-dgp-walkthrough.qmd#common-errors">Common errors table</a>), most commonly:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Message</th>
+<th>Likely cause</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>`var_x`/`var_y` must each be one of StuVoc1, StuVoc2, GK, ART3</code></td>
+<td>Misspelled or unsupported test name passed to any function here.</td>
+</tr>
+<tr class="even">
+<td><code>`var_x` and `var_y` must be different tests</code></td>
+<td>The same test name passed twice as both <code>var_x</code> and <code>var_y</code>.</td>
+</tr>
+<tr class="odd">
+<td>Warning: <code>achieved reliability (...) differs from the requested target (...)</code></td>
+<td>A <code>reliability</code>/<code>reliability_grid</code> value pushed calibration outside its tolerance — see <code>psych-battery-dgp.R</code>’s <code>calibrate_ability_general()</code>.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="exercises" class="level2">
+<h2 class="anchored" data-anchor-id="exercises">Exercises</h2>
+<ol type="1">
+<li>Call <code>summarize_single_study("StuVoc1", "StuVoc2", n = 15, seed = 1)</code> for several different seeds (1 through 10). How many of the ten come back significant? Does that roughly match what <code>plot_power_curves()</code> predicts for <code>n = 15</code> on this pair?</li>
+<li>Build a corridor plot for StuVoc1–ART3 (r ≈ .52) using <code>n_grid = c(10, 20, 40, 80, 150)</code>. Compare the N at which it turns mostly red (significant) to the StuVoc1–GK corridor above — does the weaker correlation need a larger N to reach the same mix, as you’d expect?</li>
+<li>Run <code>plot_power_curves("StuVoc1", "GK", n_grid = c(...), reliability_grid = 0.5)</code> (a reliability well below the Vermeiren default for both tests) and compare to the default-reliability power curve above. Which error source — sampling or measurement — is responsible for the difference, and does that match what <a href="sampling-measurement-error-walkthrough.qmd">sampling-measurement-error-walkthrough.qmd</a> would predict?</li>
+<li>At what sample size does StuVoc1–GK’s power first exceed 80%? Use <code>plot_power_curves()</code>’s underlying <code>run_sweep()</code>/<code>summarize_sweep()</code> calls directly (rather than reading it off the plot) to find a more precise answer.</li>
+<li>Pick an <code>alpha</code> other than .05 (e.g.&nbsp;.01 or .10) and re-run <code>plot_power_curves("StuVoc1", "StuVoc2", ...)</code> with it. What happens to both the true_corr = 0 curve and the true_corr = .82 curve, and why do they move in opposite directions?</li>
+</ol>
+</section>
+<section id="see-also" class="level2">
+<h2 class="anchored" data-anchor-id="see-also">See also</h2>
+<ul>
+<li><a href="psych-battery-dgp-walkthrough.qmd">psych-battery-dgp-walkthrough.qmd</a> — the shared simulation/sweep engine this script orchestrates (<code>simulate_pair()</code>, <code>run_sweep()</code>, <code>summarize_sweep()</code>, <code>plot_metrics_vs_x()</code>), including its own validation against <span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>’s reported power benchmarks.</li>
+<li><a href="sampling-measurement-error-walkthrough.qmd">sampling-measurement-error-walkthrough.qmd</a> — the measurement-error/sampling-error distinction this script’s <code>reliability_grid</code> argument connects to (Exercise 3 above).</li>
+<li><a href="error-rates-process-control-walkthrough.qmd">error-rates-process-control-walkthrough.qmd</a> — takes the same <code>run_sweep()</code>/<code>summarize_sweep()</code> engine used here and reframes power, Type I rate, sign consistency, and coverage as long-run Neyman–Pearson process-control error rates, varying all three dials together rather than one pair at a time.</li>
+</ul>
+</section>
+<section id="references" class="level2 unnumbered">
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-vermeiren2023" class="csl-entry" role="listitem">
+Vermeiren, Hanke, Aaron Vandendaele, and Marc Brysbaert. 2023. <span>“Validated Tests for Language Research with University Students Whose Native Language Is <span>English</span>: <span>Tests</span> of Vocabulary, General Knowledge, Author Recognition, and Reading Comprehension.”</span> <em>Behavior Research Methods</em> 55: 1036–68. <a href="https://doi.org/10.3758/s13428-022-01856-x">https://doi.org/10.3758/s13428-022-01856-x</a>.
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

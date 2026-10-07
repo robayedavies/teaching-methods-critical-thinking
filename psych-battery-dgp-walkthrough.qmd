@@ -1,0 +1,556 @@
+---
+title: "`psych-battery-dgp.R`: a four-test psychological battery simulator"
+subtitle: "Walkthrough: how the script works, and how to use it in Quarto"
+format:
+  html:
+    code-fold: false
+    toc: true
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+## Aims
+
+`psych-battery-dgp.R` is the shared infrastructure every other script in
+this set is built on. It simulates a battery of four correlated
+psychological tests — StuVoc1, StuVoc2, GK, ART3, grounded in @vermeiren2023
+— and exposes exactly three independently controllable "dials", because
+those three dials are what the surrounding teaching scripts each take turns
+holding fixed and varying:
+
+- **(i) participant sample size** (`n`) — how many people are in a study;
+- **(ii) measurement error**, via each test's **reliability** — how noisy a
+  single person's score is;
+- **(iii) the *true* (construct-level) correlation** between two tests'
+  underlying abilities — what the correlation *would* be if both tests were
+  measured without error; together with (ii), this determines how strong a
+  correlation the *observed* scores actually show.
+
+On top of the simulator sits a generic diagnostic/sweep engine
+(`run_sweep()`, `summarize_sweep()`) that repeats a correlation test many
+times over a grid of these dials and computes **power, the empirical false
+positive (Type I) rate, sign consistency (Type S), the Type M "exaggeration
+ratio" [@gelman2014], and confidence-interval coverage** — the same
+diagnostic quartet used in this project's heavier Aims 1–2 `glmer`
+simulation work, here scaled down to run inline rather than as a background
+job.
+
+The simulator isn't just plausible — it's checked against real numbers.
+Simulated at its default settings, it reproduces @vermeiren2023's own
+reported test statistics (means, reliabilities, inter-test correlations)
+closely, and a quick power sweep reproduces the power values the paper
+itself reports for a true r = .2 correlation at N = 40 and N = 200 (see the
+[Validation](#validation-against-vermeiren-et-al-2023) section).
+
+After working through it, you should be able to:
+
+- explain why reliability, true correlation, and observed correlation
+  can't be set independently of one another, and what `build_sigma_true()`
+  / `disattenuate()` do about that;
+- generate a single study (`simulate_battery()`), a two-test focal pair
+  (`simulate_pair()`), or a sweep over sample size/reliability/true
+  correlation (`run_sweep()`), and read off power, Type I rate, sign
+  consistency, the Type M exaggeration ratio, and coverage from the result;
+- explain why `simulate_pair()` exists as a separate function rather than
+  always drawing from the full four-test correlation matrix.
+
+## Prerequisites / assumptions
+
+- **Packages**: `ggplot2`; `MASS`, called via `::` only (so it never masks
+  `dplyr::select()` if `dplyr` happens to be attached) — same convention as
+  this project's Aims 1–2 code; base R `stats` for `uniroot()`,
+  `integrate()`, and `cor.test()`.
+- **Sourcing**: standalone — no other script needs to be sourced first.
+  This script is, in turn, a prerequisite for `sampling-measurement-error.R`,
+  `nhst-power.R`, and `error-rates-process-control.R`.
+- **Reader background**: classical test theory terms (reliability, true
+  score, attenuation) and basic `ggplot2`/`cor.test()` familiarity are
+  assumed.
+
+```{r}
+#| label: source-script
+source("psych-battery-dgp.R")
+```
+
+## How it works: the process
+
+```{r}
+#| label: model-equation
+#| echo: false
+#| results: asis
+cat(
+  "$$",
+  "\\text{Standardized true ability (correlated across tests):} \\quad z_i \\sim \\text{MVN}(0, \\Sigma_{\\text{true}})",
+  "$$",
+  "$$",
+  "\\text{Per test } t \\text{, calibrated ability:} \\quad \\theta_{ti} = \\theta_{\\mu,t} + \\theta_{\\sigma,t} \\, z_{it}",
+  "$$",
+  "$$",
+  "\\text{Per-item probability:} \\quad p_{ti} = \\text{guessing}_t + (1 - \\text{guessing}_t) \\cdot \\text{plogis}(\\theta_{ti})",
+  "$$",
+  "$$",
+  "\\text{4AFC tests (StuVoc1, StuVoc2, GK):} \\quad \\text{score}_{ti} \\sim \\text{Binomial}(n_{\\text{items},t}, p_{ti})",
+  "$$",
+  "$$",
+  "\\text{ART3:} \\quad \\text{hits}_i \\sim \\text{Binomial}(60, p_{\\text{ART3},i}), \\quad \\text{rejects}_i \\sim \\text{Binomial}(30, p_{\\text{ART3},i})",
+  "$$",
+  sep = "\n"
+)
+```
+
+`reliability` and `Σ_true` are never set on the observed-score scale
+directly — the whole script exists to make that translation automatic:
+
+```{mermaid}
+flowchart LR
+    A["default_test_specs()\ndefault_reliability_vec()\ndefault_r_obs_matrix()\n(Vermeiren-grounded defaults)"] --> B["build_sigma_true()\ndisattenuate observed r\n-> true-score correlation matrix"]
+    B --> C["simulate_battery()\nz ~ MVN(0, Sigma_true)\nper-test calibrate + draw scores"]
+    B --> D["simulate_pair()\ntwo-test focal-pair version,\navoids 4x4 PD issues in a sweep"]
+    D --> E["fit_focal_cor()\ncor.test(var_x, var_y)"]
+    E --> F["diagnose_cor_result()\nsignificant? sign-correct? covers?"]
+    F --> G["run_sweep()\nrepeat over n x true_corr x reliability x reps"]
+    G --> H["summarize_sweep()\npower/Type I, sign consistency, coverage"]
+    H --> I["plot_metrics_vs_x() /\nplot_power_heatmap()"]
+```
+
+The central design idea, same philosophy as `sampling-distributions.R`'s
+`calibrate_ability()`, generalized to four tests and two item-response
+mechanisms: **you set the things that matter pedagogically — a test's mean
+score, its reliability, and the *observed* correlation you want two tests
+to show — and the script solves numerically for the underlying ability
+parameters that reproduce them**, rather than requiring you to work out the
+ability-scale numbers yourself.
+
+## Element-by-element walkthrough
+
+### Vermeiren-grounded defaults: `default_test_specs()`, `default_reliability_vec()`, `default_r_obs_matrix()`
+
+```{r}
+#| label: demo-defaults
+default_test_specs()
+default_reliability_vec()
+default_r_obs_matrix()
+```
+
+Every number here is traceable to a specific table or figure in
+@vermeiren2023's Study 5: item counts and means from their Table 6
+(StuVoc1/StuVoc2/GK) and their ART3 figure, reliabilities (coefficient
+alpha) from the same table, and the observed-score correlation matrix from
+their Tables 7–8. `guessing = 0.25` on the three 4AFC tests reflects a
+one-in-four chance of a correct guess; `guessing = 0` on ART3 reflects that
+it's a yes/no recognition task, not a forced choice among four options.
+
+### Calibration machinery: `expect_theta()`, `implied_moments_general()`, `calibrate_ability_general()`, `get_calibration()`
+
+```{r}
+#| label: show-implied-moments-general
+#| eval: false
+implied_moments_general <- function(theta_mu, theta_sigma, n_items, guessing = 0) {
+  p_fun  <- function(th) guessing + (1 - guessing) * plogis(th)
+  p_bar  <- expect_theta(p_fun, theta_mu, theta_sigma)
+  p2_bar <- expect_theta(function(th) p_fun(th)^2, theta_mu, theta_sigma)
+  pq_bar <- expect_theta(function(th) { p <- p_fun(th); p * (1 - p) }, theta_mu, theta_sigma)
+
+  mean_score  <- n_items * p_bar
+  var_true    <- n_items^2 * (p2_bar - p_bar^2)
+  var_error   <- n_items * pq_bar
+  reliability <- var_true / (var_true + var_error)
+  # ...
+}
+```
+
+This generalizes `sampling-distributions.R`'s `implied_moments()` with one
+change: a `guessing` floor in `p_fun()`, which collapses back to the
+original model exactly when `guessing = 0` (ART3's case). Given a candidate
+`(theta_mu, theta_sigma)`, it works out the mean score, the between-person
+("true") variance, the within-person (measurement-error) variance, and
+their ratio — reliability — that choice implies.
+
+`calibrate_ability_general()` runs this backward: a nested `uniroot()`
+search (outer over `theta_sigma`, inner over `theta_mu`) for the parameters
+whose `implied_moments_general()` output matches a target `mu` and
+`reliability`, with the outer search bracket doubled automatically if the
+initial range doesn't contain a root.
+
+::: {.callout-note title="A `stop()` and a `warning()`, not just one or the other"}
+Two different failure modes are handled two different ways. If no bracket
+up to a generous ceiling contains a root at all (e.g. `reliability = 0.999`
+requested for a 50-item test), that's a genuinely unachievable target and
+`calibrate_ability_general()` `stop()`s with a message explaining why. But
+`uniroot()`/`integrate()` are only numerically exact up to their own
+tolerance, so even a *successful* search can land slightly off target —
+that's checked separately against a `tolerance` argument (default `0.01`)
+and only `warning()`s, since the calibration did still return a usable
+result.
+:::
+
+```{r}
+#| label: demo-calibrate-ability-general
+cal <- calibrate_ability_general(mu = 32.3, reliability = 0.88, n_items = 50, guessing = 0.25)
+cal$moments
+```
+
+`get_calibration()` wraps this in a simple cache, keyed on the rounded
+`(mu, reliability, n_items, guessing)` arguments — because a sweep calls it
+with the *same* arguments many times over (once per replicate within a
+grid cell), and re-running `uniroot()`/`integrate()` every time would be
+needless, measurable overhead at sweep scale.
+
+### Disattenuation: `disattenuate()` and `build_sigma_true()`
+
+```{r}
+#| label: show-disattenuate
+disattenuate
+```
+
+This is the single formula the whole "three dials" design rests on:
+classical test theory says $r_{\text{true}} = r_{\text{observed}} /
+\sqrt{\text{reliability}_x \cdot \text{reliability}_y}$ — usually used to
+*estimate* a disattenuated correlation from data. Here it's run in the
+*opposite* direction: given a target *observed*-score correlation (one of
+the Vermeiren-grounded defaults, or an override), solve for the
+*true*-score correlation that, once measurement error is added back in via
+the per-test calibration above, will reproduce it.
+
+`build_sigma_true()` applies this to every off-diagonal cell of a target
+observed-score correlation matrix to build the full 4×4 matrix that's
+actually fed to the multivariate draw:
+
+```{r}
+#| label: show-build-sigma-true-guard
+#| eval: false
+ev <- eigen(Sigma, symmetric = TRUE)
+if (any(ev$values < 1e-8)) {
+  warning("Sigma_true was not positive-definite after disattenuation; nudging to the nearest valid correlation matrix (eigenvalue clipping).")
+  vals <- pmax(ev$values, 1e-6)
+  adj <- ev$vectors %*% diag(vals) %*% t(ev$vectors)
+  d <- sqrt(diag(adj))
+  Sigma <- adj / outer(d, d)
+  dimnames(Sigma) <- list(nm, nm)
+}
+```
+
+::: {.callout-note title="Why a 4x4 matrix can stop being positive-definite"}
+Disattenuating each pairwise correlation independently doesn't guarantee
+the resulting matrix is still a valid correlation matrix (positive
+semi-definite) — pushing even one cell to an extreme value (as a sweep
+deliberately does) can make the implied matrix mathematically
+inconsistent as a whole. Rather than erroring out, `build_sigma_true()`
+nudges it to the nearest valid matrix by clipping negative eigenvalues to
+a small positive floor and rescaling back to a correlation matrix, with a
+`warning()` so this correction isn't silent.
+:::
+
+```{r}
+#| label: demo-build-sigma-true
+S <- build_sigma_true(default_r_obs_matrix(), default_reliability_vec())
+round(S, 2)
+```
+
+### Simulating one study: `simulate_battery()`
+
+```{r}
+#| label: show-simulate-battery-core
+#| eval: false
+z <- MASS::mvrnorm(n, mu = rep(0, 4), Sigma = Sigma_true)
+colnames(z) <- names(specs)
+
+for (t in names(specs)) {
+  sp  <- specs[[t]]
+  cal <- get_calibration(sp$mu, rel[[t]], sp$n_items, sp$guessing)
+  theta <- cal$theta_mu + cal$theta_sigma * z[, t]
+  p <- sp$guessing + (1 - sp$guessing) * plogis(theta)
+  # 4AFC: out[[t]] <- rbinom(n, sp$n_items, p)
+  # ART3: hits/rejects drawn separately, plus fp/fn rate columns
+}
+```
+
+One `MASS::mvrnorm()` draw gives every simulated participant's correlated
+true abilities across all four tests at once; the loop then applies each
+test's own calibrated item-response mechanism. This is the function to
+reach for when you want **one realistic dataset** — every test, Vermeiren-
+default correlations and reliabilities unless overridden:
+
+```{r}
+#| label: demo-simulate-battery
+d <- simulate_battery(n = 2000, seed = 1)
+str(d)
+round(cor(d[c("StuVoc1", "StuVoc2", "GK", "ART3")]), 2)
+```
+
+### Simulating a focal pair: `simulate_pair()`
+
+`run_sweep()` doesn't use `simulate_battery()` — it uses a leaner sibling,
+`simulate_pair()`, that draws only the two tests under test:
+
+```{r}
+#| label: demo-simulate-pair
+d2 <- simulate_pair(n = 300, var_x = "StuVoc1", var_y = "GK",
+                     true_corr = 0.2, corr_scale = "observed", seed = 2)
+cor(d2$StuVoc1, d2$GK)
+```
+
+::: {.callout-tip title="Why not just reuse the full 4x4 matrix for a sweep?"}
+A sweep deliberately pushes one cell of the correlation matrix to extreme
+values (including 0, to measure the false-positive rate). Doing that
+inside the full 4×4 `Sigma_true` risks exactly the positive-definiteness
+problem `build_sigma_true()`'s eigenvalue-clipping guard exists to patch —
+and patching it silently changes *other* tests' correlations too, which
+would be a confusing side effect in a sweep meant to vary only one pair.
+`simulate_pair()` sidesteps this by only ever building a 2×2 correlation
+matrix for the two tests actually being tested, which stays
+positive-definite for any correlation in `(-1, 1)`.
+:::
+
+`corr_scale` controls what `true_corr` means: `"observed"` (the default)
+treats it as the *observed*-score correlation and disattenuates
+internally — the right choice for NHST/power work, where the population
+parameter being tested lives on the observed scale (used throughout
+`run_sweep()`, below). `"latent"` treats it as the *true*-score correlation
+directly, with no compensation — used by `sampling-measurement-error.R`'s
+attenuation figure, where the point is to hold the construct-level
+relationship fixed and watch the *observed* correlation respond to
+reliability.
+
+### Repeated studies: `simulate_studies_battery()`
+
+```{r}
+#| label: demo-simulate-studies-battery
+studies <- simulate_studies_battery(n = 40, n_studies = 4, seed = 3)
+tapply(studies$StuVoc1, studies$study, mean)
+```
+
+Thin wrapper: call `simulate_battery()` once per study (without resetting
+the seed between calls, so each study differs but the whole sequence is
+reproducible from one top-level `seed`), row-binding the results with a
+`study` label — same pattern as `sampling-distributions.R`'s
+`simulate_studies()`.
+
+### NHST on one dataset: `fit_focal_cor()` and `diagnose_cor_result()`
+
+```{r}
+#| label: demo-fit-diagnose
+fit <- fit_focal_cor(d2, "StuVoc1", "GK")
+fit
+diagnose_cor_result(fit, true_value = 0.2)
+```
+
+`fit_focal_cor()` is a thin wrapper around `cor.test()`, returning just the
+estimate, CI, and p-value as a one-row data frame. `diagnose_cor_result()`
+is where the *teaching* content lives: given the **true** value used to
+simulate the data (something a real researcher never gets to know),
+classify the fitted result as significant (CI/p excludes zero),
+sign-correct (only meaningful when the true value isn't zero — there's no
+"correct" nonzero sign to match under the null, hence `NA`), whether the CI
+covers the truth, and `inflation_ratio` — `|estimate| / |true_value|`, the
+Type M "how exaggerated is this estimate" ratio [@gelman2014], also `NA`
+under the null for the same reason `sign_correct` is (dividing by a true
+value of zero is undefined, and "exaggeration relative to zero" isn't a
+meaningful question anyway).
+
+### The sweep engine: `run_sweep()` and `summarize_sweep()`
+
+This is the script's most distinctive piece of code — the one place the
+"three dials, four diagnostics" design is all visible at once — so it's
+worth reading in full rather than trimmed:
+
+```{r}
+#| label: show-run-sweep-full
+run_sweep
+```
+
+::: {.callout-note title="Deterministic per-cell seeding"}
+`seed_cell <- seed_base + rep_i * 1e6 + n * 1e3 + round(reliability * 100) + round((true_corr + 1) * 1000)`
+gives every `(n, true_corr, reliability, rep)` combination its own fixed
+seed, derived arithmetically rather than drawn once and reused — the same
+scheme used by this project's Aims 1–2 background-job simulations. The
+practical payoff: any single cell of a sweep can be reproduced in
+isolation (useful for debugging one surprising result) without re-running
+the whole sweep, and the whole sweep is reproducible end to end from one
+`seed_base`.
+:::
+
+```{r}
+#| label: demo-run-sweep
+sweep <- run_sweep(n_grid = c(40, 200), true_corr_grid = c(0, 0.2, 0.67),
+                    reps = 200, var_x = "StuVoc1", var_y = "GK", seed_base = 777)
+summ <- summarize_sweep(sweep)
+summ
+```
+
+Reading this table: at `true_corr = 0` (the null), `power_or_type1` is the
+empirical **false positive rate** — it should sit near `alpha` (.05).
+Everywhere else, it's **power**. `sign_consistency` and `type_m_ratio` are
+both `NA` at `true_corr = 0` (no correct sign to match, and no meaningful
+"exaggeration relative to zero") and otherwise computed only among
+*significant* results: `sign_consistency` is the proportion that pointed
+the right direction, `type_m_ratio` is the **median** `inflation_ratio`
+among them (median rather than mean, since significance filtering
+disproportionately selects the occasional large outlier estimate,
+especially at small `n`). `coverage` is the proportion of 95% CIs that
+actually contained the true value — should sit near .95 regardless of
+`true_corr`.
+
+### Figures: `plot_metrics_vs_x()` and `plot_power_heatmap()`
+
+```{r}
+#| label: demo-plot-metrics-vs-x
+#| fig-width: 7
+#| fig-height: 4.5
+plot_metrics_vs_x(summ, x = "n", metrics = "power_or_type1", color_by = "true_corr")
+```
+
+```{r}
+#| label: demo-plot-power-heatmap
+#| fig-width: 6
+#| fig-height: 3.5
+plot_power_heatmap(summ, x = "n", y = "true_corr")
+```
+
+Both take `summarize_sweep()`'s output directly and are deliberately
+generic — any 0–1-bounded metric column (`power_or_type1`,
+`sign_consistency`, `coverage`) can be plotted against any swept dial,
+which is what lets the same two functions serve `nhst-power.R` and
+`error-rates-process-control.R` without modification.
+
+::: {.callout-note title="Why `type_m_ratio` gets its own figure, not these two"}
+`type_m_ratio` is deliberately left out of that list. Both
+`plot_metrics_vs_x()` (a shared `c(0, 1)` y-axis across metrics) and
+`plot_power_heatmap()` (a `c(0, 1)` fill scale, with cell labels formatted
+as percentages) assume a 0–1 proportion — true of power, sign consistency,
+and coverage, but not of an exaggeration ratio, which is 1 at no inflation
+and can comfortably exceed 2–3 at low power. Plotting it through either
+function would silently clip or flatten the part of the story that matters
+most. `error-rates-process-control.R` instead gives it a dedicated figure,
+`plot_type_m_curve()`, with its own appropriately scaled axis.
+:::
+
+## Quarto usage / integration
+
+This script is standalone infrastructure — not itself wired into
+`doing-being-science.qmd`, and not meant to be used alone for a finished
+figure; `sampling-measurement-error.R`, `nhst-power.R`, and
+`error-rates-process-control.R` each source it and build their own
+figures/narrative on top. A typical setup chunk:
+
+```r
+source("psych-battery-dgp.R")
+```
+
+### Validation against Vermeiren et al. (2023) {#validation-against-vermeiren-et-al-2023}
+
+```{r}
+#| label: validation-moments
+specs <- default_test_specs()
+rel   <- default_reliability_vec()
+validation <- do.call(rbind, lapply(names(specs), function(t) {
+  sp  <- specs[[t]]
+  cal <- get_calibration(sp$mu, rel[[t]], sp$n_items, sp$guessing)
+  data.frame(test = t, target_mean = sp$mu, implied_mean = round(cal$moments$mean_score, 2),
+             target_reliability = rel[[t]], implied_reliability = round(cal$moments$reliability, 4))
+}))
+validation
+```
+
+```{r}
+#| label: validation-correlations
+d_val <- simulate_battery(n = 5000, seed = 101)
+cat("Simulated observed correlations (n = 5000):\n")
+print(round(cor(d_val[c("StuVoc1", "StuVoc2", "GK", "ART3")]), 2))
+cat("\nVermeiren et al. (2023) Study 5 targets:\n")
+print(default_r_obs_matrix())
+```
+
+```{r}
+#| label: validation-power-benchmark
+bench <- run_sweep(n_grid = c(40, 200), true_corr_grid = c(0, 0.2),
+                    reps = 300, var_x = "StuVoc1", var_y = "GK", seed_base = 777)
+summarize_sweep(bench)[c("n", "true_corr", "power_or_type1", "coverage")]
+```
+
+@vermeiren2023's own power illustration (their "Power considerations"
+section) reports power ≈ .23 at N=40 and ≈ .81 at N=200 for a true
+correlation of r = .2 — the `true_corr = 0.2` rows above should land close
+to those values (simulation noise from only 300 replicates per cell means
+exact agreement isn't expected). The `true_corr = 0` rows give the
+empirical false-positive rate, which should sit near the nominal .05.
+
+### Parameter quick reference
+
+| Function | Parameter | Default | Meaning |
+|---|---|---|---|
+| `simulate_battery()` | `n` | — | Sample size (dial i). |
+| | `reliability` | `NULL` | Named override for one or more tests (dial ii); `NULL` uses Vermeiren defaults. |
+| | `Sigma_true` | `NULL` | A 4×4 true-score correlation matrix (dial iii); `NULL` builds one from `default_r_obs_matrix()` + whichever reliability is in effect. |
+| | `keep_latent` | `FALSE` | If `TRUE`, also return each test's `theta`/`p` columns. |
+| `simulate_pair()` | `var_x`, `var_y` | — | The two tests to simulate. |
+| | `true_corr` | `0` | Target correlation, on whichever scale `corr_scale` selects. |
+| | `corr_scale` | `"observed"` | `"observed"`: disattenuate internally so `true_corr` is the *observed*-score correlation. `"latent"`: use `true_corr` directly as the true-score correlation. |
+| `run_sweep()` | `n_grid`, `true_corr_grid`, `reliability_grid` | — / — / `NULL` | The three dials to sweep; `reliability_grid = NULL` holds reliability fixed at `var_x`'s default. |
+| | `reps` | `200` | Replicate studies per grid cell. |
+| | `alpha` | `0.05` | Significance threshold. |
+| | `seed_base` | `1234` | Base seed for deterministic per-cell seeding. |
+| *(calibration)* | `tolerance` | `0.01` | Max acceptable gap between requested and achieved reliability before `calibrate_ability_general()` warns. |
+
+### Common errors
+
+| Message | Likely cause |
+|---|---|
+| `reliability = ... is not achievable at mu = ...` | Requested reliability too close to 1 (or `mu` too close to the guessing floor/ceiling) for the given `n_items`/`guessing`. |
+| Warning: `achieved reliability (...) differs from the requested target (...)` | Calibration succeeded but landed outside `tolerance` of the target — usually near an achievability extreme; treat downstream diagnostics with caution. |
+| Warning: `Target observed correlation r = ... is not achievable at ...` | Requested observed correlation exceeds what's reachable given the two tests' reliabilities (`\|r_true\| > 1`); capped. |
+| Warning: `Sigma_true was not positive-definite after disattenuation...` | A disattenuated correlation matrix wasn't a valid correlation matrix; nudged via eigenvalue clipping. |
+| `` `r_obs_matrix` must be named on both dimensions `` | `build_sigma_true()` called with an unnamed matrix. |
+| `` `Sigma_true` must be a 4x4 matrix named StuVoc1/StuVoc2/GK/ART3 `` | `simulate_battery()` called with a malformed/mislabeled `Sigma_true`. |
+| `` `var_x`/`var_y` must each be one of StuVoc1, StuVoc2, GK, ART3 `` | Misspelled or unsupported test name passed to `simulate_pair()`. |
+| `` `var_x` and `var_y` must be different tests `` | Same test name passed twice. |
+
+## Exercises
+
+1. Call `calibrate_ability_general(mu = 42.2, reliability = 0.995, n_items = 65, guessing = 0.25)`
+   (GK, pushed to a near-unachievable reliability). Does it warn, error, or
+   succeed silently? Compare `$moments$reliability` to the requested value.
+2. Build `Sigma_true` from `default_r_obs_matrix()` but with the
+   StuVoc1–ART3 cell manually set to `0.95` before calling
+   `build_sigma_true()`. Does it warn? Inspect the returned matrix — did
+   any *other* pair's correlation change as a side effect?
+3. Use `simulate_pair()` with `corr_scale = "latent"` and `corr_scale =
+   "observed"` for the same `true_corr = 0.5` on StuVoc1/GK. Why do the two
+   calls produce different simulated correlations in `cor(d$StuVoc1,
+   d$GK)`?
+4. Run `run_sweep()` for the StuVoc1–ART3 pair (r ≈ .52) instead of
+   StuVoc1–GK, at the same `n_grid`. At what `n` does power cross 80%, and
+   how does that compare to the StuVoc1–GK benchmark above?
+5. Re-run the validation power-benchmark chunk with `reps = 1000` instead
+   of `300`. Does the gap between the simulated and Vermeiren-reported
+   power values shrink, as you'd expect from reducing simulation noise?
+6. Re-run `run_sweep()`/`summarize_sweep()` for StuVoc1–GK at
+   `true_corr_grid = 0.2` (a weaker effect than the pair's actual ≈.67)
+   across `n_grid = c(10, 20, 50, 100, 200)`. How large is `type_m_ratio`
+   at `n = 10`, and how far has it fallen by `n = 200`? Compare to how
+   `power_or_type1` moves over the same range.
+
+## See also
+
+- [sampling-distributions-walkthrough.qmd](sampling-distributions-walkthrough.qmd)
+  — the single-test ancestor of this script's calibration approach
+  (`calibrate_ability()`/`implied_moments()`, generalized here to
+  `calibrate_ability_general()`/`implied_moments_general()` with a
+  guessing floor).
+- [sampling-measurement-error-walkthrough.qmd](sampling-measurement-error-walkthrough.qmd)
+  — uses `get_calibration()` and `simulate_pair()` from this script to
+  separate measurement error (dial ii) from sampling error (dial i).
+- [nhst-power-walkthrough.qmd](nhst-power-walkthrough.qmd) — uses
+  `run_sweep()` and `summarize_sweep()` from this script to walk through
+  NHST and power for the StuVoc1–StuVoc2 and StuVoc1–GK pairs.
+- [error-rates-process-control-walkthrough.qmd](error-rates-process-control-walkthrough.qmd)
+  — uses the same sweep engine, now varying all three dials together, to
+  frame power/Type I/sign-consistency/coverage as long-run Neyman–Pearson
+  process-control error rates.
+
+## References

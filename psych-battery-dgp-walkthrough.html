@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>psych-battery-dgp.R: a four-test psychological battery simulator</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="psych-battery-dgp-walkthrough_files/libs/clipboard/clipboard.min.js"></script>
+<script src="psych-battery-dgp-walkthrough_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="psych-battery-dgp-walkthrough_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="psych-battery-dgp-walkthrough_files/libs/quarto-html/popper.min.js"></script>
+<script src="psych-battery-dgp-walkthrough_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="psych-battery-dgp-walkthrough_files/libs/quarto-html/anchor.min.js"></script>
+<link href="psych-battery-dgp-walkthrough_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="psych-battery-dgp-walkthrough_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="psych-battery-dgp-walkthrough_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="psych-battery-dgp-walkthrough_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="psych-battery-dgp-walkthrough_files/libs/bootstrap/bootstrap-917079515d91bccb85b543faf8aa8bb6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="psych-battery-dgp-walkthrough_files/libs/quarto-diagram/mermaid.min.js"></script>
+<script src="psych-battery-dgp-walkthrough_files/libs/quarto-diagram/mermaid-init.js"></script>
+<link href="psych-battery-dgp-walkthrough_files/libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#aims" id="toc-aims" class="nav-link active" data-scroll-target="#aims">Aims</a></li>
+  <li><a href="#prerequisites-assumptions" id="toc-prerequisites-assumptions" class="nav-link" data-scroll-target="#prerequisites-assumptions">Prerequisites / assumptions</a></li>
+  <li><a href="#how-it-works-the-process" id="toc-how-it-works-the-process" class="nav-link" data-scroll-target="#how-it-works-the-process">How it works: the process</a></li>
+  <li><a href="#element-by-element-walkthrough" id="toc-element-by-element-walkthrough" class="nav-link" data-scroll-target="#element-by-element-walkthrough">Element-by-element walkthrough</a>
+  <ul class="collapse">
+  <li><a href="#vermeiren-grounded-defaults-default_test_specs-default_reliability_vec-default_r_obs_matrix" id="toc-vermeiren-grounded-defaults-default_test_specs-default_reliability_vec-default_r_obs_matrix" class="nav-link" data-scroll-target="#vermeiren-grounded-defaults-default_test_specs-default_reliability_vec-default_r_obs_matrix">Vermeiren-grounded defaults: <code>default_test_specs()</code>, <code>default_reliability_vec()</code>, <code>default_r_obs_matrix()</code></a></li>
+  <li><a href="#calibration-machinery-expect_theta-implied_moments_general-calibrate_ability_general-get_calibration" id="toc-calibration-machinery-expect_theta-implied_moments_general-calibrate_ability_general-get_calibration" class="nav-link" data-scroll-target="#calibration-machinery-expect_theta-implied_moments_general-calibrate_ability_general-get_calibration">Calibration machinery: <code>expect_theta()</code>, <code>implied_moments_general()</code>, <code>calibrate_ability_general()</code>, <code>get_calibration()</code></a></li>
+  <li><a href="#disattenuation-disattenuate-and-build_sigma_true" id="toc-disattenuation-disattenuate-and-build_sigma_true" class="nav-link" data-scroll-target="#disattenuation-disattenuate-and-build_sigma_true">Disattenuation: <code>disattenuate()</code> and <code>build_sigma_true()</code></a></li>
+  <li><a href="#simulating-one-study-simulate_battery" id="toc-simulating-one-study-simulate_battery" class="nav-link" data-scroll-target="#simulating-one-study-simulate_battery">Simulating one study: <code>simulate_battery()</code></a></li>
+  <li><a href="#simulating-a-focal-pair-simulate_pair" id="toc-simulating-a-focal-pair-simulate_pair" class="nav-link" data-scroll-target="#simulating-a-focal-pair-simulate_pair">Simulating a focal pair: <code>simulate_pair()</code></a></li>
+  <li><a href="#repeated-studies-simulate_studies_battery" id="toc-repeated-studies-simulate_studies_battery" class="nav-link" data-scroll-target="#repeated-studies-simulate_studies_battery">Repeated studies: <code>simulate_studies_battery()</code></a></li>
+  <li><a href="#nhst-on-one-dataset-fit_focal_cor-and-diagnose_cor_result" id="toc-nhst-on-one-dataset-fit_focal_cor-and-diagnose_cor_result" class="nav-link" data-scroll-target="#nhst-on-one-dataset-fit_focal_cor-and-diagnose_cor_result">NHST on one dataset: <code>fit_focal_cor()</code> and <code>diagnose_cor_result()</code></a></li>
+  <li><a href="#the-sweep-engine-run_sweep-and-summarize_sweep" id="toc-the-sweep-engine-run_sweep-and-summarize_sweep" class="nav-link" data-scroll-target="#the-sweep-engine-run_sweep-and-summarize_sweep">The sweep engine: <code>run_sweep()</code> and <code>summarize_sweep()</code></a></li>
+  <li><a href="#figures-plot_metrics_vs_x-and-plot_power_heatmap" id="toc-figures-plot_metrics_vs_x-and-plot_power_heatmap" class="nav-link" data-scroll-target="#figures-plot_metrics_vs_x-and-plot_power_heatmap">Figures: <code>plot_metrics_vs_x()</code> and <code>plot_power_heatmap()</code></a></li>
+  </ul></li>
+  <li><a href="#quarto-usage-integration" id="toc-quarto-usage-integration" class="nav-link" data-scroll-target="#quarto-usage-integration">Quarto usage / integration</a>
+  <ul class="collapse">
+  <li><a href="#validation-against-vermeiren-et-al-2023" id="toc-validation-against-vermeiren-et-al-2023" class="nav-link" data-scroll-target="#validation-against-vermeiren-et-al-2023">Validation against Vermeiren et al.&nbsp;(2023)</a></li>
+  <li><a href="#parameter-quick-reference" id="toc-parameter-quick-reference" class="nav-link" data-scroll-target="#parameter-quick-reference">Parameter quick reference</a></li>
+  <li><a href="#common-errors" id="toc-common-errors" class="nav-link" data-scroll-target="#common-errors">Common errors</a></li>
+  </ul></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises">Exercises</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See also</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><code>psych-battery-dgp.R</code>: a four-test psychological battery simulator</h1>
+<p class="subtitle lead">Walkthrough: how the script works, and how to use it in Quarto</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="aims" class="level2">
+<h2 class="anchored" data-anchor-id="aims">Aims</h2>
+<p><code>psych-battery-dgp.R</code> is the shared infrastructure every other script in this set is built on. It simulates a battery of four correlated psychological tests — StuVoc1, StuVoc2, GK, ART3, grounded in <span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span> — and exposes exactly three independently controllable “dials”, because those three dials are what the surrounding teaching scripts each take turns holding fixed and varying:</p>
+<ul>
+<li><strong>(i) participant sample size</strong> (<code>n</code>) — how many people are in a study;</li>
+<li><strong>(ii) measurement error</strong>, via each test’s <strong>reliability</strong> — how noisy a single person’s score is;</li>
+<li><strong>(iii) the <em>true</em> (construct-level) correlation</strong> between two tests’ underlying abilities — what the correlation <em>would</em> be if both tests were measured without error; together with (ii), this determines how strong a correlation the <em>observed</em> scores actually show.</li>
+</ul>
+<p>On top of the simulator sits a generic diagnostic/sweep engine (<code>run_sweep()</code>, <code>summarize_sweep()</code>) that repeats a correlation test many times over a grid of these dials and computes <strong>power, the empirical false positive (Type I) rate, sign consistency (Type S), the Type M “exaggeration ratio” <span class="citation" data-cites="gelman2014">(<a href="#ref-gelman2014" role="doc-biblioref">Gelman and Carlin 2014</a>)</span>, and confidence-interval coverage</strong> — the same diagnostic quartet used in this project’s heavier Aims 1–2 <code>glmer</code> simulation work, here scaled down to run inline rather than as a background job.</p>
+<p>The simulator isn’t just plausible — it’s checked against real numbers. Simulated at its default settings, it reproduces <span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>’s own reported test statistics (means, reliabilities, inter-test correlations) closely, and a quick power sweep reproduces the power values the paper itself reports for a true r = .2 correlation at N = 40 and N = 200 (see the <a href="#validation-against-vermeiren-et-al-2023">Validation</a> section).</p>
+<p>After working through it, you should be able to:</p>
+<ul>
+<li>explain why reliability, true correlation, and observed correlation can’t be set independently of one another, and what <code>build_sigma_true()</code> / <code>disattenuate()</code> do about that;</li>
+<li>generate a single study (<code>simulate_battery()</code>), a two-test focal pair (<code>simulate_pair()</code>), or a sweep over sample size/reliability/true correlation (<code>run_sweep()</code>), and read off power, Type I rate, sign consistency, the Type M exaggeration ratio, and coverage from the result;</li>
+<li>explain why <code>simulate_pair()</code> exists as a separate function rather than always drawing from the full four-test correlation matrix.</li>
+</ul>
+</section>
+<section id="prerequisites-assumptions" class="level2">
+<h2 class="anchored" data-anchor-id="prerequisites-assumptions">Prerequisites / assumptions</h2>
+<ul>
+<li><strong>Packages</strong>: <code>ggplot2</code>; <code>MASS</code>, called via <code>::</code> only (so it never masks <code>dplyr::select()</code> if <code>dplyr</code> happens to be attached) — same convention as this project’s Aims 1–2 code; base R <code>stats</code> for <code>uniroot()</code>, <code>integrate()</code>, and <code>cor.test()</code>.</li>
+<li><strong>Sourcing</strong>: standalone — no other script needs to be sourced first. This script is, in turn, a prerequisite for <code>sampling-measurement-error.R</code>, <code>nhst-power.R</code>, and <code>error-rates-process-control.R</code>.</li>
+<li><strong>Reader background</strong>: classical test theory terms (reliability, true score, attenuation) and basic <code>ggplot2</code>/<code>cor.test()</code> familiarity are assumed.</li>
+</ul>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"psych-battery-dgp.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="how-it-works-the-process" class="level2">
+<h2 class="anchored" data-anchor-id="how-it-works-the-process">How it works: the process</h2>
+<div class="cell" data-layout-align="center">
+<p><span class="math display">\[
+\text{Standardized true ability (correlated across tests):} \quad z_i \sim \text{MVN}(0, \Sigma_{\text{true}})
+\]</span> <span class="math display">\[
+\text{Per test } t \text{, calibrated ability:} \quad \theta_{ti} = \theta_{\mu,t} + \theta_{\sigma,t} \, z_{it}
+\]</span> <span class="math display">\[
+\text{Per-item probability:} \quad p_{ti} = \text{guessing}_t + (1 - \text{guessing}_t) \cdot \text{plogis}(\theta_{ti})
+\]</span> <span class="math display">\[
+\text{4AFC tests (StuVoc1, StuVoc2, GK):} \quad \text{score}_{ti} \sim \text{Binomial}(n_{\text{items},t}, p_{ti})
+\]</span> <span class="math display">\[
+\text{ART3:} \quad \text{hits}_i \sim \text{Binomial}(60, p_{\text{ART3},i}), \quad \text{rejects}_i \sim \text{Binomial}(30, p_{\text{ART3},i})
+\]</span></p>
+</div>
+<p><code>reliability</code> and <code>Σ_true</code> are never set on the observed-score scale directly — the whole script exists to make that translation automatic:</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    A["default_test_specs()\ndefault_reliability_vec()\ndefault_r_obs_matrix()\n(Vermeiren-grounded defaults)"] --&gt; B["build_sigma_true()\ndisattenuate observed r\n-&gt; true-score correlation matrix"]
+    B --&gt; C["simulate_battery()\nz ~ MVN(0, Sigma_true)\nper-test calibrate + draw scores"]
+    B --&gt; D["simulate_pair()\ntwo-test focal-pair version,\navoids 4x4 PD issues in a sweep"]
+    D --&gt; E["fit_focal_cor()\ncor.test(var_x, var_y)"]
+    E --&gt; F["diagnose_cor_result()\nsignificant? sign-correct? covers?"]
+    F --&gt; G["run_sweep()\nrepeat over n x true_corr x reliability x reps"]
+    G --&gt; H["summarize_sweep()\npower/Type I, sign consistency, coverage"]
+    H --&gt; I["plot_metrics_vs_x() /\nplot_power_heatmap()"]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>The central design idea, same philosophy as <code>sampling-distributions.R</code>’s <code>calibrate_ability()</code>, generalized to four tests and two item-response mechanisms: <strong>you set the things that matter pedagogically — a test’s mean score, its reliability, and the <em>observed</em> correlation you want two tests to show — and the script solves numerically for the underlying ability parameters that reproduce them</strong>, rather than requiring you to work out the ability-scale numbers yourself.</p>
+</section>
+<section id="element-by-element-walkthrough" class="level2">
+<h2 class="anchored" data-anchor-id="element-by-element-walkthrough">Element-by-element walkthrough</h2>
+<section id="vermeiren-grounded-defaults-default_test_specs-default_reliability_vec-default_r_obs_matrix" class="level3">
+<h3 class="anchored" data-anchor-id="vermeiren-grounded-defaults-default_test_specs-default_reliability_vec-default_r_obs_matrix">Vermeiren-grounded defaults: <code>default_test_specs()</code>, <code>default_reliability_vec()</code>, <code>default_r_obs_matrix()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">default_test_specs</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$StuVoc1
+$StuVoc1$n_items
+[1] 50
+
+$StuVoc1$mu
+[1] 32.3
+
+$StuVoc1$guessing
+[1] 0.25
+
+
+$StuVoc2
+$StuVoc2$n_items
+[1] 50
+
+$StuVoc2$mu
+[1] 34
+
+$StuVoc2$guessing
+[1] 0.25
+
+
+$GK
+$GK$n_items
+[1] 65
+
+$GK$mu
+[1] 42.2
+
+$GK$guessing
+[1] 0.25
+
+
+$ART3
+$ART3$n_items
+[1] 90
+
+$ART3$mu
+[1] 57.1
+
+$ART3$guessing
+[1] 0
+
+$ART3$split
+authors   foils 
+     60      30 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">default_reliability_vec</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>StuVoc1 StuVoc2      GK    ART3 
+   0.88    0.91    0.83    0.90 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">default_r_obs_matrix</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        StuVoc1 StuVoc2   GK ART3
+StuVoc1    1.00    0.82 0.67 0.52
+StuVoc2    0.82    1.00 0.71 0.40
+GK         0.67    0.71 1.00 0.31
+ART3       0.52    0.40 0.31 1.00</code></pre>
+</div>
+</div>
+<p>Every number here is traceable to a specific table or figure in <span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>’s Study 5: item counts and means from their Table 6 (StuVoc1/StuVoc2/GK) and their ART3 figure, reliabilities (coefficient alpha) from the same table, and the observed-score correlation matrix from their Tables 7–8. <code>guessing = 0.25</code> on the three 4AFC tests reflects a one-in-four chance of a correct guess; <code>guessing = 0</code> on ART3 reflects that it’s a yes/no recognition task, not a forced choice among four options.</p>
+</section>
+<section id="calibration-machinery-expect_theta-implied_moments_general-calibrate_ability_general-get_calibration" class="level3">
+<h3 class="anchored" data-anchor-id="calibration-machinery-expect_theta-implied_moments_general-calibrate_ability_general-get_calibration">Calibration machinery: <code>expect_theta()</code>, <code>implied_moments_general()</code>, <code>calibrate_ability_general()</code>, <code>get_calibration()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>implied_moments_general <span class="ot">&lt;-</span> <span class="cf">function</span>(theta_mu, theta_sigma, n_items, <span class="at">guessing =</span> <span class="dv">0</span>) {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  p_fun  <span class="ot">&lt;-</span> <span class="cf">function</span>(th) guessing <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> guessing) <span class="sc">*</span> <span class="fu">plogis</span>(th)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  p_bar  <span class="ot">&lt;-</span> <span class="fu">expect_theta</span>(p_fun, theta_mu, theta_sigma)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  p2_bar <span class="ot">&lt;-</span> <span class="fu">expect_theta</span>(<span class="cf">function</span>(th) <span class="fu">p_fun</span>(th)<span class="sc">^</span><span class="dv">2</span>, theta_mu, theta_sigma)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  pq_bar <span class="ot">&lt;-</span> <span class="fu">expect_theta</span>(<span class="cf">function</span>(th) { p <span class="ot">&lt;-</span> <span class="fu">p_fun</span>(th); p <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> p) }, theta_mu, theta_sigma)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  mean_score  <span class="ot">&lt;-</span> n_items <span class="sc">*</span> p_bar</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  var_true    <span class="ot">&lt;-</span> n_items<span class="sc">^</span><span class="dv">2</span> <span class="sc">*</span> (p2_bar <span class="sc">-</span> p_bar<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  var_error   <span class="ot">&lt;-</span> n_items <span class="sc">*</span> pq_bar</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  reliability <span class="ot">&lt;-</span> var_true <span class="sc">/</span> (var_true <span class="sc">+</span> var_error)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ...</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This generalizes <code>sampling-distributions.R</code>’s <code>implied_moments()</code> with one change: a <code>guessing</code> floor in <code>p_fun()</code>, which collapses back to the original model exactly when <code>guessing = 0</code> (ART3’s case). Given a candidate <code>(theta_mu, theta_sigma)</code>, it works out the mean score, the between-person (“true”) variance, the within-person (measurement-error) variance, and their ratio — reliability — that choice implies.</p>
+<p><code>calibrate_ability_general()</code> runs this backward: a nested <code>uniroot()</code> search (outer over <code>theta_sigma</code>, inner over <code>theta_mu</code>) for the parameters whose <code>implied_moments_general()</code> output matches a target <code>mu</code> and <code>reliability</code>, with the outer search bracket doubled automatically if the initial range doesn’t contain a root.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="A `stop()` and a `warning()`, not just one or the other">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>A <code>stop()</code> and a <code>warning()</code>, not just one or the other
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Two different failure modes are handled two different ways. If no bracket up to a generous ceiling contains a root at all (e.g.&nbsp;<code>reliability = 0.999</code> requested for a 50-item test), that’s a genuinely unachievable target and <code>calibrate_ability_general()</code> <code>stop()</code>s with a message explaining why. But <code>uniroot()</code>/<code>integrate()</code> are only numerically exact up to their own tolerance, so even a <em>successful</em> search can land slightly off target — that’s checked separately against a <code>tolerance</code> argument (default <code>0.01</code>) and only <code>warning()</code>s, since the calibration did still return a usable result.</p>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>cal <span class="ot">&lt;-</span> <span class="fu">calibrate_ability_general</span>(<span class="at">mu =</span> <span class="fl">32.3</span>, <span class="at">reliability =</span> <span class="fl">0.88</span>, <span class="at">n_items =</span> <span class="dv">50</span>, <span class="at">guessing =</span> <span class="fl">0.25</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>cal<span class="sc">$</span>moments</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$mean_score
+[1] 32.30011
+
+$var_true
+[1] 73.12552
+
+$var_error
+[1] 9.971659
+
+$reliability
+[1] 0.88
+
+$sd_true
+[1] 8.551346
+
+$sd_total
+[1] 9.115765</code></pre>
+</div>
+</div>
+<p><code>get_calibration()</code> wraps this in a simple cache, keyed on the rounded <code>(mu, reliability, n_items, guessing)</code> arguments — because a sweep calls it with the <em>same</em> arguments many times over (once per replicate within a grid cell), and re-running <code>uniroot()</code>/<code>integrate()</code> every time would be needless, measurable overhead at sweep scale.</p>
+</section>
+<section id="disattenuation-disattenuate-and-build_sigma_true" class="level3">
+<h3 class="anchored" data-anchor-id="disattenuation-disattenuate-and-build_sigma_true">Disattenuation: <code>disattenuate()</code> and <code>build_sigma_true()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>disattenuate</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>function (r_obs, reliability_x, reliability_y) 
+{
+    denom &lt;- sqrt(reliability_x * reliability_y)
+    r_true &lt;- r_obs/denom
+    if (abs(r_true) &gt; 1) {
+        warning(sprintf(paste("Target observed correlation r = %.2f is not achievable at", 
+            "reliabilities %.2f and %.2f (it would require a true-score", 
+            "correlation above 1); capping the true-score correlation at", 
+            "%.3f."), r_obs, reliability_x, reliability_y, sign(r_true) * 
+            0.999))
+        r_true &lt;- sign(r_true) * 0.999
+    }
+    r_true
+}</code></pre>
+</div>
+</div>
+<p>This is the single formula the whole “three dials” design rests on: classical test theory says <span class="math inline">\(r_{\text{true}} = r_{\text{observed}} /
+\sqrt{\text{reliability}_x \cdot \text{reliability}_y}\)</span> — usually used to <em>estimate</em> a disattenuated correlation from data. Here it’s run in the <em>opposite</em> direction: given a target <em>observed</em>-score correlation (one of the Vermeiren-grounded defaults, or an override), solve for the <em>true</em>-score correlation that, once measurement error is added back in via the per-test calibration above, will reproduce it.</p>
+<p><code>build_sigma_true()</code> applies this to every off-diagonal cell of a target observed-score correlation matrix to build the full 4×4 matrix that’s actually fed to the multivariate draw:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>ev <span class="ot">&lt;-</span> <span class="fu">eigen</span>(Sigma, <span class="at">symmetric =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">any</span>(ev<span class="sc">$</span>values <span class="sc">&lt;</span> <span class="fl">1e-8</span>)) {</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">warning</span>(<span class="st">"Sigma_true was not positive-definite after disattenuation; nudging to the nearest valid correlation matrix (eigenvalue clipping)."</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  vals <span class="ot">&lt;-</span> <span class="fu">pmax</span>(ev<span class="sc">$</span>values, <span class="fl">1e-6</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  adj <span class="ot">&lt;-</span> ev<span class="sc">$</span>vectors <span class="sc">%*%</span> <span class="fu">diag</span>(vals) <span class="sc">%*%</span> <span class="fu">t</span>(ev<span class="sc">$</span>vectors)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(adj))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  Sigma <span class="ot">&lt;-</span> adj <span class="sc">/</span> <span class="fu">outer</span>(d, d)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dimnames</span>(Sigma) <span class="ot">&lt;-</span> <span class="fu">list</span>(nm, nm)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Why a 4x4 matrix can stop being positive-definite">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why a 4x4 matrix can stop being positive-definite
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Disattenuating each pairwise correlation independently doesn’t guarantee the resulting matrix is still a valid correlation matrix (positive semi-definite) — pushing even one cell to an extreme value (as a sweep deliberately does) can make the implied matrix mathematically inconsistent as a whole. Rather than erroring out, <code>build_sigma_true()</code> nudges it to the nearest valid matrix by clipping negative eigenvalues to a small positive floor and rescaling back to a correlation matrix, with a <code>warning()</code> so this correction isn’t silent.</p>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fu">build_sigma_true</span>(<span class="fu">default_r_obs_matrix</span>(), <span class="fu">default_reliability_vec</span>())</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(S, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        StuVoc1 StuVoc2   GK ART3
+StuVoc1    1.00    0.92 0.78 0.58
+StuVoc2    0.92    1.00 0.82 0.44
+GK         0.78    0.82 1.00 0.36
+ART3       0.58    0.44 0.36 1.00</code></pre>
+</div>
+</div>
+</section>
+<section id="simulating-one-study-simulate_battery" class="level3">
+<h3 class="anchored" data-anchor-id="simulating-one-study-simulate_battery">Simulating one study: <code>simulate_battery()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> MASS<span class="sc">::</span><span class="fu">mvrnorm</span>(n, <span class="at">mu =</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>), <span class="at">Sigma =</span> Sigma_true)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">names</span>(specs)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (t <span class="cf">in</span> <span class="fu">names</span>(specs)) {</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  sp  <span class="ot">&lt;-</span> specs[[t]]</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  cal <span class="ot">&lt;-</span> <span class="fu">get_calibration</span>(sp<span class="sc">$</span>mu, rel[[t]], sp<span class="sc">$</span>n_items, sp<span class="sc">$</span>guessing)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  theta <span class="ot">&lt;-</span> cal<span class="sc">$</span>theta_mu <span class="sc">+</span> cal<span class="sc">$</span>theta_sigma <span class="sc">*</span> z[, t]</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> sp<span class="sc">$</span>guessing <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> sp<span class="sc">$</span>guessing) <span class="sc">*</span> <span class="fu">plogis</span>(theta)</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 4AFC: out[[t]] &lt;- rbinom(n, sp$n_items, p)</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ART3: hits/rejects drawn separately, plus fp/fn rate columns</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>One <code>MASS::mvrnorm()</code> draw gives every simulated participant’s correlated true abilities across all four tests at once; the loop then applies each test’s own calibrated item-response mechanism. This is the function to reach for when you want <strong>one realistic dataset</strong> — every test, Vermeiren- default correlations and reliabilities unless overridden:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">simulate_battery</span>(<span class="at">n =</span> <span class="dv">2000</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(d)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   2000 obs. of  7 variables:
+ $ id          : int  1 2 3 4 5 6 7 8 9 10 ...
+ $ StuVoc1     : int  24 28 19 48 36 26 28 44 46 27 ...
+ $ StuVoc2     : int  32 47 30 43 34 24 36 46 45 38 ...
+ $ GK          : int  47 51 25 57 55 30 51 49 49 38 ...
+ $ ART3        : int  32 33 71 83 64 54 66 56 34 55 ...
+ $ ART3_fn_rate: num  0.65 0.6167 0.2167 0.0667 0.2667 ...
+ $ ART3_fp_rate: num  0.633 0.667 0.2 0.1 0.333 ...</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">cor</span>(d[<span class="fu">c</span>(<span class="st">"StuVoc1"</span>, <span class="st">"StuVoc2"</span>, <span class="st">"GK"</span>, <span class="st">"ART3"</span>)]), <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        StuVoc1 StuVoc2   GK ART3
+StuVoc1    1.00    0.82 0.69 0.51
+StuVoc2    0.82    1.00 0.71 0.40
+GK         0.69    0.71 1.00 0.34
+ART3       0.51    0.40 0.34 1.00</code></pre>
+</div>
+</div>
+</section>
+<section id="simulating-a-focal-pair-simulate_pair" class="level3">
+<h3 class="anchored" data-anchor-id="simulating-a-focal-pair-simulate_pair">Simulating a focal pair: <code>simulate_pair()</code></h3>
+<p><code>run_sweep()</code> doesn’t use <code>simulate_battery()</code> — it uses a leaner sibling, <code>simulate_pair()</code>, that draws only the two tests under test:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>d2 <span class="ot">&lt;-</span> <span class="fu">simulate_pair</span>(<span class="at">n =</span> <span class="dv">300</span>, <span class="at">var_x =</span> <span class="st">"StuVoc1"</span>, <span class="at">var_y =</span> <span class="st">"GK"</span>,</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>                     <span class="at">true_corr =</span> <span class="fl">0.2</span>, <span class="at">corr_scale =</span> <span class="st">"observed"</span>, <span class="at">seed =</span> <span class="dv">2</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cor</span>(d2<span class="sc">$</span>StuVoc1, d2<span class="sc">$</span>GK)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.2706309</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Why not just reuse the full 4x4 matrix for a sweep?">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Why not just reuse the full 4x4 matrix for a sweep?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A sweep deliberately pushes one cell of the correlation matrix to extreme values (including 0, to measure the false-positive rate). Doing that inside the full 4×4 <code>Sigma_true</code> risks exactly the positive-definiteness problem <code>build_sigma_true()</code>‘s eigenvalue-clipping guard exists to patch — and patching it silently changes <em>other</em> tests’ correlations too, which would be a confusing side effect in a sweep meant to vary only one pair. <code>simulate_pair()</code> sidesteps this by only ever building a 2×2 correlation matrix for the two tests actually being tested, which stays positive-definite for any correlation in <code>(-1, 1)</code>.</p>
+</div>
+</div>
+<p><code>corr_scale</code> controls what <code>true_corr</code> means: <code>"observed"</code> (the default) treats it as the <em>observed</em>-score correlation and disattenuates internally — the right choice for NHST/power work, where the population parameter being tested lives on the observed scale (used throughout <code>run_sweep()</code>, below). <code>"latent"</code> treats it as the <em>true</em>-score correlation directly, with no compensation — used by <code>sampling-measurement-error.R</code>’s attenuation figure, where the point is to hold the construct-level relationship fixed and watch the <em>observed</em> correlation respond to reliability.</p>
+</section>
+<section id="repeated-studies-simulate_studies_battery" class="level3">
+<h3 class="anchored" data-anchor-id="repeated-studies-simulate_studies_battery">Repeated studies: <code>simulate_studies_battery()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>studies <span class="ot">&lt;-</span> <span class="fu">simulate_studies_battery</span>(<span class="at">n =</span> <span class="dv">40</span>, <span class="at">n_studies =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">3</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tapply</span>(studies<span class="sc">$</span>StuVoc1, studies<span class="sc">$</span>study, mean)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Study 1 Study 2 Study 3 Study 4 
+ 31.825  35.600  32.950  32.450 </code></pre>
+</div>
+</div>
+<p>Thin wrapper: call <code>simulate_battery()</code> once per study (without resetting the seed between calls, so each study differs but the whole sequence is reproducible from one top-level <code>seed</code>), row-binding the results with a <code>study</code> label — same pattern as <code>sampling-distributions.R</code>’s <code>simulate_studies()</code>.</p>
+</section>
+<section id="nhst-on-one-dataset-fit_focal_cor-and-diagnose_cor_result" class="level3">
+<h3 class="anchored" data-anchor-id="nhst-on-one-dataset-fit_focal_cor-and-diagnose_cor_result">NHST on one dataset: <code>fit_focal_cor()</code> and <code>diagnose_cor_result()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">fit_focal_cor</span>(d2, <span class="st">"StuVoc1"</span>, <span class="st">"GK"</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>fit</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   estimate   ci_low   ci_high      p_value
+1 0.2706309 0.162366 0.3724572 1.965313e-06</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">diagnose_cor_result</span>(fit, <span class="at">true_value =</span> <span class="fl">0.2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   estimate      p_value significant sign_correct covers inflation_ratio
+1 0.2706309 1.965313e-06        TRUE         TRUE   TRUE        1.353154</code></pre>
+</div>
+</div>
+<p><code>fit_focal_cor()</code> is a thin wrapper around <code>cor.test()</code>, returning just the estimate, CI, and p-value as a one-row data frame. <code>diagnose_cor_result()</code> is where the <em>teaching</em> content lives: given the <strong>true</strong> value used to simulate the data (something a real researcher never gets to know), classify the fitted result as significant (CI/p excludes zero), sign-correct (only meaningful when the true value isn’t zero — there’s no “correct” nonzero sign to match under the null, hence <code>NA</code>), whether the CI covers the truth, and <code>inflation_ratio</code> — <code>|estimate| / |true_value|</code>, the Type M “how exaggerated is this estimate” ratio <span class="citation" data-cites="gelman2014">(<a href="#ref-gelman2014" role="doc-biblioref">Gelman and Carlin 2014</a>)</span>, also <code>NA</code> under the null for the same reason <code>sign_correct</code> is (dividing by a true value of zero is undefined, and “exaggeration relative to zero” isn’t a meaningful question anyway).</p>
+</section>
+<section id="the-sweep-engine-run_sweep-and-summarize_sweep" class="level3">
+<h3 class="anchored" data-anchor-id="the-sweep-engine-run_sweep-and-summarize_sweep">The sweep engine: <code>run_sweep()</code> and <code>summarize_sweep()</code></h3>
+<p>This is the script’s most distinctive piece of code — the one place the “three dials, four diagnostics” design is all visible at once — so it’s worth reading in full rather than trimmed:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>run_sweep</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>function (n_grid, true_corr_grid, reliability_grid = NULL, reps = 200, 
+    var_x = "StuVoc1", var_y = "GK", alpha = 0.05, seed_base = 1234) 
+{
+    rel_base &lt;- default_reliability_vec()
+    if (is.null(reliability_grid)) 
+        reliability_grid &lt;- unname(rel_base[[var_x]])
+    grid &lt;- expand.grid(n = n_grid, true_corr = true_corr_grid, 
+        reliability = reliability_grid, rep = seq_len(reps))
+    rows &lt;- vector("list", nrow(grid))
+    for (i in seq_len(nrow(grid))) {
+        n &lt;- grid$n[i]
+        true_corr &lt;- grid$true_corr[i]
+        reliability &lt;- grid$reliability[i]
+        rep_i &lt;- grid$rep[i]
+        seed_cell &lt;- seed_base + rep_i * 1e+06 + n * 1000 + round(reliability * 
+            100) + round((true_corr + 1) * 1000)
+        d &lt;- simulate_pair(n, var_x, var_y, true_corr = true_corr, 
+            reliability_x = reliability, reliability_y = reliability, 
+            seed = seed_cell)
+        fit &lt;- fit_focal_cor(d, var_x, var_y)
+        diag &lt;- diagnose_cor_result(fit, true_corr, alpha)
+        rows[[i]] &lt;- cbind(data.frame(n = n, true_corr = true_corr, 
+            reliability = reliability, rep = rep_i), diag)
+    }
+    do.call(rbind, rows)
+}</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Deterministic per-cell seeding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Deterministic per-cell seeding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>seed_cell &lt;- seed_base + rep_i * 1e6 + n * 1e3 + round(reliability * 100) + round((true_corr + 1) * 1000)</code> gives every <code>(n, true_corr, reliability, rep)</code> combination its own fixed seed, derived arithmetically rather than drawn once and reused — the same scheme used by this project’s Aims 1–2 background-job simulations. The practical payoff: any single cell of a sweep can be reproduced in isolation (useful for debugging one surprising result) without re-running the whole sweep, and the whole sweep is reproducible end to end from one <code>seed_base</code>.</p>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>sweep <span class="ot">&lt;-</span> <span class="fu">run_sweep</span>(<span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">40</span>, <span class="dv">200</span>), <span class="at">true_corr_grid =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.2</span>, <span class="fl">0.67</span>),</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>                    <span class="at">reps =</span> <span class="dv">200</span>, <span class="at">var_x =</span> <span class="st">"StuVoc1"</span>, <span class="at">var_y =</span> <span class="st">"GK"</span>, <span class="at">seed_base =</span> <span class="dv">777</span>)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>summ <span class="ot">&lt;-</span> <span class="fu">summarize_sweep</span>(sweep)</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>summ</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    n true_corr reliability power_or_type1 coverage sign_consistency
+4  40      0.00        0.88          0.045    0.955               NA
+1 200      0.00        0.88          0.040    0.960               NA
+5  40      0.20        0.88          0.220    0.925                1
+2 200      0.20        0.88          0.765    0.970                1
+6  40      0.67        0.88          1.000    0.965                1
+3 200      0.67        0.88          1.000    0.945                1
+  type_m_ratio n_reps
+4           NA    200
+1           NA    200
+5    1.8199545    200
+2    1.0781215    200
+6    0.9928826    200
+3    1.0007509    200</code></pre>
+</div>
+</div>
+<p>Reading this table: at <code>true_corr = 0</code> (the null), <code>power_or_type1</code> is the empirical <strong>false positive rate</strong> — it should sit near <code>alpha</code> (.05). Everywhere else, it’s <strong>power</strong>. <code>sign_consistency</code> and <code>type_m_ratio</code> are both <code>NA</code> at <code>true_corr = 0</code> (no correct sign to match, and no meaningful “exaggeration relative to zero”) and otherwise computed only among <em>significant</em> results: <code>sign_consistency</code> is the proportion that pointed the right direction, <code>type_m_ratio</code> is the <strong>median</strong> <code>inflation_ratio</code> among them (median rather than mean, since significance filtering disproportionately selects the occasional large outlier estimate, especially at small <code>n</code>). <code>coverage</code> is the proportion of 95% CIs that actually contained the true value — should sit near .95 regardless of <code>true_corr</code>.</p>
+</section>
+<section id="figures-plot_metrics_vs_x-and-plot_power_heatmap" class="level3">
+<h3 class="anchored" data-anchor-id="figures-plot_metrics_vs_x-and-plot_power_heatmap">Figures: <code>plot_metrics_vs_x()</code> and <code>plot_power_heatmap()</code></h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_metrics_vs_x</span>(summ, <span class="at">x =</span> <span class="st">"n"</span>, <span class="at">metrics =</span> <span class="st">"power_or_type1"</span>, <span class="at">color_by =</span> <span class="st">"true_corr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="psych-battery-dgp-walkthrough_files/figure-html/demo-plot-metrics-vs-x-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_power_heatmap</span>(summ, <span class="at">x =</span> <span class="st">"n"</span>, <span class="at">y =</span> <span class="st">"true_corr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="psych-battery-dgp-walkthrough_files/figure-html/demo-plot-power-heatmap-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="576"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Both take <code>summarize_sweep()</code>’s output directly and are deliberately generic — any 0–1-bounded metric column (<code>power_or_type1</code>, <code>sign_consistency</code>, <code>coverage</code>) can be plotted against any swept dial, which is what lets the same two functions serve <code>nhst-power.R</code> and <code>error-rates-process-control.R</code> without modification.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Why `type_m_ratio` gets its own figure, not these two">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why <code>type_m_ratio</code> gets its own figure, not these two
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>type_m_ratio</code> is deliberately left out of that list. Both <code>plot_metrics_vs_x()</code> (a shared <code>c(0, 1)</code> y-axis across metrics) and <code>plot_power_heatmap()</code> (a <code>c(0, 1)</code> fill scale, with cell labels formatted as percentages) assume a 0–1 proportion — true of power, sign consistency, and coverage, but not of an exaggeration ratio, which is 1 at no inflation and can comfortably exceed 2–3 at low power. Plotting it through either function would silently clip or flatten the part of the story that matters most. <code>error-rates-process-control.R</code> instead gives it a dedicated figure, <code>plot_type_m_curve()</code>, with its own appropriately scaled axis.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="quarto-usage-integration" class="level2">
+<h2 class="anchored" data-anchor-id="quarto-usage-integration">Quarto usage / integration</h2>
+<p>This script is standalone infrastructure — not itself wired into <code>doing-being-science.qmd</code>, and not meant to be used alone for a finished figure; <code>sampling-measurement-error.R</code>, <code>nhst-power.R</code>, and <code>error-rates-process-control.R</code> each source it and build their own figures/narrative on top. A typical setup chunk:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"psych-battery-dgp.R"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="validation-against-vermeiren-et-al-2023" class="level3">
+<h3 class="anchored" data-anchor-id="validation-against-vermeiren-et-al-2023">Validation against Vermeiren et al.&nbsp;(2023)</h3>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>specs <span class="ot">&lt;-</span> <span class="fu">default_test_specs</span>()</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>rel   <span class="ot">&lt;-</span> <span class="fu">default_reliability_vec</span>()</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>validation <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(<span class="fu">names</span>(specs), <span class="cf">function</span>(t) {</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  sp  <span class="ot">&lt;-</span> specs[[t]]</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  cal <span class="ot">&lt;-</span> <span class="fu">get_calibration</span>(sp<span class="sc">$</span>mu, rel[[t]], sp<span class="sc">$</span>n_items, sp<span class="sc">$</span>guessing)</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="at">test =</span> t, <span class="at">target_mean =</span> sp<span class="sc">$</span>mu, <span class="at">implied_mean =</span> <span class="fu">round</span>(cal<span class="sc">$</span>moments<span class="sc">$</span>mean_score, <span class="dv">2</span>),</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>             <span class="at">target_reliability =</span> rel[[t]], <span class="at">implied_reliability =</span> <span class="fu">round</span>(cal<span class="sc">$</span>moments<span class="sc">$</span>reliability, <span class="dv">4</span>))</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>validation</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     test target_mean implied_mean target_reliability implied_reliability
+1 StuVoc1        32.3         32.3               0.88                0.88
+2 StuVoc2        34.0         34.0               0.91                0.91
+3      GK        42.2         42.2               0.83                0.83
+4    ART3        57.1         57.1               0.90                0.90</code></pre>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>d_val <span class="ot">&lt;-</span> <span class="fu">simulate_battery</span>(<span class="at">n =</span> <span class="dv">5000</span>, <span class="at">seed =</span> <span class="dv">101</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Simulated observed correlations (n = 5000):</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simulated observed correlations (n = 5000):</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">round</span>(<span class="fu">cor</span>(d_val[<span class="fu">c</span>(<span class="st">"StuVoc1"</span>, <span class="st">"StuVoc2"</span>, <span class="st">"GK"</span>, <span class="st">"ART3"</span>)]), <span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        StuVoc1 StuVoc2   GK ART3
+StuVoc1    1.00    0.81 0.66 0.53
+StuVoc2    0.81    1.00 0.70 0.40
+GK         0.66    0.70 1.00 0.31
+ART3       0.53    0.40 0.31 1.00</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">Vermeiren et al. (2023) Study 5 targets:</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Vermeiren et al. (2023) Study 5 targets:</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">default_r_obs_matrix</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        StuVoc1 StuVoc2   GK ART3
+StuVoc1    1.00    0.82 0.67 0.52
+StuVoc2    0.82    1.00 0.71 0.40
+GK         0.67    0.71 1.00 0.31
+ART3       0.52    0.40 0.31 1.00</code></pre>
+</div>
+</div>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>bench <span class="ot">&lt;-</span> <span class="fu">run_sweep</span>(<span class="at">n_grid =</span> <span class="fu">c</span>(<span class="dv">40</span>, <span class="dv">200</span>), <span class="at">true_corr_grid =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.2</span>),</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>                    <span class="at">reps =</span> <span class="dv">300</span>, <span class="at">var_x =</span> <span class="st">"StuVoc1"</span>, <span class="at">var_y =</span> <span class="st">"GK"</span>, <span class="at">seed_base =</span> <span class="dv">777</span>)</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summarize_sweep</span>(bench)[<span class="fu">c</span>(<span class="st">"n"</span>, <span class="st">"true_corr"</span>, <span class="st">"power_or_type1"</span>, <span class="st">"coverage"</span>)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    n true_corr power_or_type1  coverage
+3  40       0.0     0.04666667 0.9533333
+1 200       0.0     0.04000000 0.9600000
+4  40       0.2     0.23333333 0.9200000
+2 200       0.2     0.77000000 0.9633333</code></pre>
+</div>
+</div>
+<p><span class="citation" data-cites="vermeiren2023">Vermeiren et al. (<a href="#ref-vermeiren2023" role="doc-biblioref">2023</a>)</span>’s own power illustration (their “Power considerations” section) reports power ≈ .23 at N=40 and ≈ .81 at N=200 for a true correlation of r = .2 — the <code>true_corr = 0.2</code> rows above should land close to those values (simulation noise from only 300 replicates per cell means exact agreement isn’t expected). The <code>true_corr = 0</code> rows give the empirical false-positive rate, which should sit near the nominal .05.</p>
+</section>
+<section id="parameter-quick-reference" class="level3">
+<h3 class="anchored" data-anchor-id="parameter-quick-reference">Parameter quick reference</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Parameter</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>simulate_battery()</code></td>
+<td><code>n</code></td>
+<td>—</td>
+<td>Sample size (dial i).</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>reliability</code></td>
+<td><code>NULL</code></td>
+<td>Named override for one or more tests (dial ii); <code>NULL</code> uses Vermeiren defaults.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>Sigma_true</code></td>
+<td><code>NULL</code></td>
+<td>A 4×4 true-score correlation matrix (dial iii); <code>NULL</code> builds one from <code>default_r_obs_matrix()</code> + whichever reliability is in effect.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>keep_latent</code></td>
+<td><code>FALSE</code></td>
+<td>If <code>TRUE</code>, also return each test’s <code>theta</code>/<code>p</code> columns.</td>
+</tr>
+<tr class="odd">
+<td><code>simulate_pair()</code></td>
+<td><code>var_x</code>, <code>var_y</code></td>
+<td>—</td>
+<td>The two tests to simulate.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>true_corr</code></td>
+<td><code>0</code></td>
+<td>Target correlation, on whichever scale <code>corr_scale</code> selects.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>corr_scale</code></td>
+<td><code>"observed"</code></td>
+<td><code>"observed"</code>: disattenuate internally so <code>true_corr</code> is the <em>observed</em>-score correlation. <code>"latent"</code>: use <code>true_corr</code> directly as the true-score correlation.</td>
+</tr>
+<tr class="even">
+<td><code>run_sweep()</code></td>
+<td><code>n_grid</code>, <code>true_corr_grid</code>, <code>reliability_grid</code></td>
+<td>— / — / <code>NULL</code></td>
+<td>The three dials to sweep; <code>reliability_grid = NULL</code> holds reliability fixed at <code>var_x</code>’s default.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>reps</code></td>
+<td><code>200</code></td>
+<td>Replicate studies per grid cell.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>alpha</code></td>
+<td><code>0.05</code></td>
+<td>Significance threshold.</td>
+</tr>
+<tr class="odd">
+<td></td>
+<td><code>seed_base</code></td>
+<td><code>1234</code></td>
+<td>Base seed for deterministic per-cell seeding.</td>
+</tr>
+<tr class="even">
+<td><em>(calibration)</em></td>
+<td><code>tolerance</code></td>
+<td><code>0.01</code></td>
+<td>Max acceptable gap between requested and achieved reliability before <code>calibrate_ability_general()</code> warns.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="common-errors" class="level3">
+<h3 class="anchored" data-anchor-id="common-errors">Common errors</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Message</th>
+<th>Likely cause</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>reliability = ... is not achievable at mu = ...</code></td>
+<td>Requested reliability too close to 1 (or <code>mu</code> too close to the guessing floor/ceiling) for the given <code>n_items</code>/<code>guessing</code>.</td>
+</tr>
+<tr class="even">
+<td>Warning: <code>achieved reliability (...) differs from the requested target (...)</code></td>
+<td>Calibration succeeded but landed outside <code>tolerance</code> of the target — usually near an achievability extreme; treat downstream diagnostics with caution.</td>
+</tr>
+<tr class="odd">
+<td>Warning: <code>Target observed correlation r = ... is not achievable at ...</code></td>
+<td>Requested observed correlation exceeds what’s reachable given the two tests’ reliabilities (<code>\|r_true\| &gt; 1</code>); capped.</td>
+</tr>
+<tr class="even">
+<td>Warning: <code>Sigma_true was not positive-definite after disattenuation...</code></td>
+<td>A disattenuated correlation matrix wasn’t a valid correlation matrix; nudged via eigenvalue clipping.</td>
+</tr>
+<tr class="odd">
+<td><code>`r_obs_matrix` must be named on both dimensions</code></td>
+<td><code>build_sigma_true()</code> called with an unnamed matrix.</td>
+</tr>
+<tr class="even">
+<td><code>`Sigma_true` must be a 4x4 matrix named StuVoc1/StuVoc2/GK/ART3</code></td>
+<td><code>simulate_battery()</code> called with a malformed/mislabeled <code>Sigma_true</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>`var_x`/`var_y` must each be one of StuVoc1, StuVoc2, GK, ART3</code></td>
+<td>Misspelled or unsupported test name passed to <code>simulate_pair()</code>.</td>
+</tr>
+<tr class="even">
+<td><code>`var_x` and `var_y` must be different tests</code></td>
+<td>Same test name passed twice.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="exercises" class="level2">
+<h2 class="anchored" data-anchor-id="exercises">Exercises</h2>
+<ol type="1">
+<li>Call <code>calibrate_ability_general(mu = 42.2, reliability = 0.995, n_items = 65, guessing = 0.25)</code> (GK, pushed to a near-unachievable reliability). Does it warn, error, or succeed silently? Compare <code>$moments$reliability</code> to the requested value.</li>
+<li>Build <code>Sigma_true</code> from <code>default_r_obs_matrix()</code> but with the StuVoc1–ART3 cell manually set to <code>0.95</code> before calling <code>build_sigma_true()</code>. Does it warn? Inspect the returned matrix — did any <em>other</em> pair’s correlation change as a side effect?</li>
+<li>Use <code>simulate_pair()</code> with <code>corr_scale = "latent"</code> and <code>corr_scale = "observed"</code> for the same <code>true_corr = 0.5</code> on StuVoc1/GK. Why do the two calls produce different simulated correlations in <code>cor(d$StuVoc1, d$GK)</code>?</li>
+<li>Run <code>run_sweep()</code> for the StuVoc1–ART3 pair (r ≈ .52) instead of StuVoc1–GK, at the same <code>n_grid</code>. At what <code>n</code> does power cross 80%, and how does that compare to the StuVoc1–GK benchmark above?</li>
+<li>Re-run the validation power-benchmark chunk with <code>reps = 1000</code> instead of <code>300</code>. Does the gap between the simulated and Vermeiren-reported power values shrink, as you’d expect from reducing simulation noise?</li>
+<li>Re-run <code>run_sweep()</code>/<code>summarize_sweep()</code> for StuVoc1–GK at <code>true_corr_grid = 0.2</code> (a weaker effect than the pair’s actual ≈.67) across <code>n_grid = c(10, 20, 50, 100, 200)</code>. How large is <code>type_m_ratio</code> at <code>n = 10</code>, and how far has it fallen by <code>n = 200</code>? Compare to how <code>power_or_type1</code> moves over the same range.</li>
+</ol>
+</section>
+<section id="see-also" class="level2">
+<h2 class="anchored" data-anchor-id="see-also">See also</h2>
+<ul>
+<li><a href="sampling-distributions-walkthrough.qmd">sampling-distributions-walkthrough.qmd</a> — the single-test ancestor of this script’s calibration approach (<code>calibrate_ability()</code>/<code>implied_moments()</code>, generalized here to <code>calibrate_ability_general()</code>/<code>implied_moments_general()</code> with a guessing floor).</li>
+<li><a href="sampling-measurement-error-walkthrough.qmd">sampling-measurement-error-walkthrough.qmd</a> — uses <code>get_calibration()</code> and <code>simulate_pair()</code> from this script to separate measurement error (dial ii) from sampling error (dial i).</li>
+<li><a href="nhst-power-walkthrough.qmd">nhst-power-walkthrough.qmd</a> — uses <code>run_sweep()</code> and <code>summarize_sweep()</code> from this script to walk through NHST and power for the StuVoc1–StuVoc2 and StuVoc1–GK pairs.</li>
+<li><a href="error-rates-process-control-walkthrough.qmd">error-rates-process-control-walkthrough.qmd</a> — uses the same sweep engine, now varying all three dials together, to frame power/Type I/sign-consistency/coverage as long-run Neyman–Pearson process-control error rates.</li>
+</ul>
+</section>
+<section id="references" class="level2 unnumbered">
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-gelman2014" class="csl-entry" role="listitem">
+Gelman, Andrew, and John Carlin. 2014. <span>“Beyond Power Calculations.”</span> <em>Perspectives on Psychological Science</em> 9 (6): 641–51. <a href="https://doi.org/10.1177/1745691614551642">https://doi.org/10.1177/1745691614551642</a>.
+</div>
+<div id="ref-vermeiren2023" class="csl-entry" role="listitem">
+Vermeiren, Hanke, Aaron Vandendaele, and Marc Brysbaert. 2023. <span>“Validated Tests for Language Research with University Students Whose Native Language Is <span>English</span>: <span>Tests</span> of Vocabulary, General Knowledge, Author Recognition, and Reading Comprehension.”</span> <em>Behavior Research Methods</em> 55: 1036–68. <a href="https://doi.org/10.3758/s13428-022-01856-x">https://doi.org/10.3758/s13428-022-01856-x</a>.
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
